@@ -1,0 +1,43 @@
+{
+  "comment": "THIS IS A TEMPLATE. Replace with your actual google-services.json from Firebase Console.",
+  "comment_2": "To get your real google-services.json:",
+  "steps": [
+    "1. Go to https://console.firebase.google.com/",
+    "2. Create a new project (or select existing)",
+    "3. Add Android app with package 'com.childhelper.app.child'",
+    "4. Add Android app with package 'com.childhelper.app.parent'",
+    "5. Download google-services.json",
+    "6. Place copies in both app/child/ and app/parent/ directories",
+    "7. For running the server, also generate a service account key:",
+    "   - Firebase Console > Project Settings > Service Accounts",
+    "   - Generate new private key",
+    "   - Set environment variable: export FIREBASE_CREDENTIALS=/path/to/key.json"
+  ],
+  "project_info": {
+    "project_number": "YOUR_PROJECT_NUMBER",
+    "project_id": "YOUR_PROJECT_ID",
+    "storage_bucket": "YOUR_PROJECT_ID.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "YOUR_APP_ID",
+        "android_client_info": {
+          "package_name": "com.childhelper.app.child"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "YOUR_API_KEY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,16 @@
+# Local Configuration Template
+# Copy this file to local.properties and fill in your values
+# local.properties is gitignored and should NOT be committed
+
+# SDK location - update to match your Android SDK path
+sdk.dir=/home/user/Android/Sdk
+
+# Optional: NDK location
+# ndk.dir=/home/user/Android/Sdk/ndk/xx.x.xxxxxxx
+
+# Release signing configuration
+# Uncomment and fill in for release builds
+# RELEASE_STORE_FILE=/path/to/your/release.keystore
+# RELEASE_STORE_PASSWORD=your_keystore_password
+# RELEASE_KEY_ALIAS=your_key_alias
+# RELEASE_KEY_PASSWORD=your_key_password

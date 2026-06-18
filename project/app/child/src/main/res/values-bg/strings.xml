@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ChildHelper</string>
+
+    <!-- Child Home Screen -->
+    <string name="sos_button_description">Бутон за спешен случай (SOS). Задръжте за 2 секунди, за да изпратите спешен сигнал до настойниците.</string>
+    <string name="sos_button_description_fab">Бутон за спешен случай (SOS). Задръжте за 2 секунди, за да активирате спешен сигнал.</string>
+    <string name="home_greeting_title">На кого искате да се обадите?</string>
+    <string name="home_greeting_subtitle">Докоснете снимка, за да се обадите</string>
+    <string name="home_welcome_message">Докоснете Мама или Татко, за да се обадите. Задръжте SOS бутона за помощ.</string>
+    <string name="status_online">Устройството е онлайн.</string>
+    <string name="status_offline">Устройството е офлайн.</string>
+    <string name="status_battery_format">Батерия на %d процента.</string>
+    <string name="status_monitoring_active">Наблюдението е активно.</string>
+    <string name="status_monitoring_inactive">Наблюдението е изключено.</string>
+    <string name="status_watching">Наблюдава</string>
+    <string name="status_idle">В покой</string>
+    <string name="bedtime_button_description">Режим за сън. Докоснете, за да влезете в успокояващ режим за сън.</string>
+    <string name="monitoring_active_title">Пазим Ви</string>
+    <string name="monitoring_inactive_title">Наблюдението е изключено</string>
+    <string name="monitoring_active_subtitle">Слушане за плач и движение</string>
+    <string name="monitoring_inactive_subtitle">Докоснете, за да започнете защита</string>
+    <string name="monitoring_content_description_active">Наблюдението е активно. Вашето устройство слуша и наблюдава, за да Ви пази.</string>
+    <string name="monitoring_content_description_inactive">Наблюдението е изключено. Докоснете, за да го стартирате.</string>
+    <string name="monitoring_start">Старт</string>
+    <string name="monitoring_stop">Стоп</string>
+    <string name="audio_call_mom_description">Само аудио обаждане до Мама. Без видео.</string>
+    <string name="audio_call_dad_description">Само аудио обаждане до Татко. Без видео.</string>
+    <string name="audio_call_mom_label">Аудио Мама</string>
+    <string name="audio_call_dad_label">Аудио Татко</string>
+    <string name="contact_mom_description">Обадете се на Мама</string>
+    <string name="contact_dad_description">Обадете се на Татко</string>
+    <string name="contact_guardian_description">Обадете се на Настойник</string>
+
+    <!-- SOS Screen -->
+    <string name="sos_title">SOS</string>
+    <string name="sos_activated">SOS сигналът е изпратен</string>
+    <string name="sos_countdown_format">SOS след %d...</string>
+    <string name="sos_voice_prompt">Изпратен е сигнал за помощ. Запазете спокойствие.</string>
+    <string name="sos_countdown_voice">%d</string>
+    <string name="sos_notifying_voice">В момента се уведомяват настойниците.</string>
+    <string name="sos_notified_voice">Настойниците са уведомени. Помощта идва.</string>
+    <string name="sos_cancelled_voice">SOS е отменен.</string>
+    <string name="sos_button_compact_description">SOS бутон. Задръжте за 2 секунди, за да активирате спешен сигнал.</string>
+
+    <!-- Call Screen -->
+    <string name="call_connecting">Свързване...</string>
+    <string name="call_ringing">Звънене...</string>
+    <string name="call_please_wait">Моля, изчакайте...</string>
+    <string name="call_audio_only">Само аудио</string>
+    <string name="call_info_format">Обаждане с %1$s. Продължителност %2$s.</string>
+    <string name="call_audio_only_suffix">Режим само аудио.</string>
+    <string name="call_status_suffix">Статус: %s.</string>
+    <string name="call_end_description">Край на обаждането. Докоснете, за да затворите.</string>
+    <string name="call_mute_description">Изключване на микрофона</string>
+    <string name="call_unmute_description">Включване на микрофона</string>
+    <string name="call_video_on_description">Включване на видеото</string>
+    <string name="call_video_off_description">Изключване на видеото</string>
+    <string name="call_switch_camera_description">Смяна на камера</string>
+    <string name="call_speaker_on_description">Изключване на високоговорителя</string>
+    <string name="call_speaker_off_description">Включване на високоговорителя</string>
+    <string name="call_voice_calling">Обаждане на %s</string>
+    <string name="call_voice_ending">Приключване на обаждането</string>
+    <string name="call_voice_connected">Обаждането е свързано</string>
+    <string name="call_voice_ended">Обаждането приключи</string>
+    <string name="call_voice_error">Грешка при обаждане: %s</string>
+    <string name="call_voice_microphone_off">Микрофонът е изключен</string>
+    <string name="call_voice_microphone_on">Микрофонът е включен</string>
+
+    <!-- Bedtime Mode Screen -->
+    <string name="bedtime_mode_title">Режим за сън</string>
+    <string name="bedtime_mode_active">Спете спокойно</string>
+    <string name="bedtime_mode_preparing">Подготовка...</string>
+    <string name="bedtime_header_description_active">Режимът за сън е активен. Лека нощ.</string>
+    <string name="bedtime_header_description_starting">Режимът за сън се стартира. Лека нощ.</string>
+    <string name="bedtime_exit_description">Изход от режим за сън. Докоснете, за да се върнете в нормален режим.</string>
+    <string name="bedtime_calm_message">Вие сте в безопасност</string>
+    <string name="bedtime_calm_submessage">Мама и Татко Ви наблюдават</string>
+    <string name="bedtime_moon_description">Успокояваща луна. Докоснете, за да чуете успокояващо съобщение.</string>
+    <string name="bedtime_play_message_description">Докоснете, за да чуете успокояващо съобщение.</string>
+    <string name="bedtime_screen_brightness">Яркост на екрана</string>
+    <string name="bedtime_brightness_slider_description">Плъзгач за яркост на екрана. Текуща стойност %d процента.</string>
+    <string name="bedtime_auto_answer_title">Автоматично отговаряне на обаждания</string>
+    <string name="bedtime_auto_answer_subtitle">Отговаряйте автоматично на обаждания от Мама/Татко</string>
+    <string name="bedtime_auto_answer_on_voice">На обажданията ще се отговаря автоматично.</string>
+    <string name="bedtime_auto_answer_off_voice">Автоматичното отговаряне е изключено.</string>
+    <string name="bedtime_monitoring_active">Наблюдението за плач и движение е активно по време на сън.</string>
+    <string name="bedtime_monitoring_inactive">Наблюдението ще започне автоматично, когато заспите.</string>
+    <string name="bedtime_listening_active">Вслушваме се</string>
+    <string name="bedtime_listening_ready">Готови за слушане</string>
+    <string name="bedtime_welcome_voice">Режимът за сън е включен. Спете спокойно. Аз Ви пазя.</string>
+    <string name="bedtime_good_morning_voice">Добро утро. Режимът за сън е изключен.</string>
+
+    <!-- Monitoring Service Notification -->
+    <string name="monitoring_notification_title">Активно наблюдение на дете</string>
+    <string name="monitoring_notification_text">Вашето дете е защитено. Наблюдението за плач и движение работи.</string>
+    <string name="monitoring_notification_stop_action">Спри наблюдение</string>
+
+    <!-- Detection Events -->
+    <string name="cry_detected">Открит плач</string>
+    <string name="motion_detected">Открито движение</string>
+    <string name="camera_obstructed">Камерата е закрита</string>
+
+    <!-- Generic -->
+    <string name="voice_calling_mom">Обаждане на Мама</string>
+    <string name="monitoring_started_voice">Наблюдението започна</string>
+    <string name="monitoring_stopped_voice">Наблюдението спря</string>
+    <string name="bedtime_mode_voice">Режим за сън</string>
+    <string name="monitoring_service_description">Непрекъснато наблюдение за плач и движение за безопасност на детето</string>
+    <string name="call_service_description">WebRTC услуга за гласови и видео обаждания</string>
+    <!-- Pairing Screen -->
+    <string name="pairing_title">Свързване с родител</string>
+    <string name="pairing_connect_to_parent">Свързване с родител</string>
+    <string name="pairing_generate_description">Генерирайте код за свързване с устройството на родителя.</string>
+    <string name="pairing_generate_button">Генерирай код за свързване</string>
+    <string name="pairing_generating">Генериране на код за свързване...</string>
+    <string name="pairing_your_code">Вашият код за свързване</string>
+    <string name="pairing_show_code_instruction">Покажете този код на родителя си, за да се свържете</string>
+    <string name="pairing_cancel">Отказ</string>
+    <string name="pairing_connected_title">Свързани!</string>
+    <string name="pairing_connected_message">Вашето устройство вече е свързано с родителя.</string>
+    <string name="pairing_done">Готово</string>
+    <string name="pairing_error_title">Грешка!</string>
+    <string name="pairing_try_again">Опитайте отново</string>
+    <string name="pairing_button">Свързване</string>
+</resources>

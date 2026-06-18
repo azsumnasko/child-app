@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ChildHelper Parent</string>
+
+    <!-- Parent Dashboard Screen -->
+    <string name="dashboard_title">Родителско табло</string>
+    <string name="settings_label">Настройки</string>
+    <string name="live_view_label">Изглед на живо</string>
+    <string name="live_view_description">Гледайте и слушайте на живо</string>
+    <string name="history_label">История</string>
+    <string name="alert_history_label">История на сигналите</string>
+    <string name="alert_history_description">Преглед на предишни сигнали</string>
+    <string name="settings_description">Конфигуриране на предпочитания</string>
+    <string name="recent_alerts_title">Последни сигнали</string>
+    <string name="view_all_label">Вижте всички</string>
+
+    <!-- Alert History Screen -->
+    <string name="alert_history_title">История на сигналите</string>
+    <string name="navigate_back_description">Навигация назад</string>
+    <string name="filter_alerts_description">Филтриране на сигнали</string>
+    <string name="export_history_description">Експортиране на история</string>
+    <string name="delete_all_history_description">Изтриване на цялата история</string>
+    <string name="no_alerts_found">Няма намерени сигнали</string>
+    <string name="no_alerts_filter_hint">Опитайте да промените филтъра</string>
+    <string name="export_dialog_title">Експортиране на история на сигналите</string>
+    <string name="export_no_alerts">Няма сигнали за експортиране.</string>
+    <string name="export_privacy_notice">Експортиране на метаданни с поверителност (без аудио/видео):</string>
+    <string name="done_label">Готово</string>
+    <string name="clear_all_history_title">Изтриване на цялата история?</string>
+    <string name="clear_all_history_message">Това ще изтрие завинаги всички %d записа на сигнали от това устройство. Действието не може да бъде отменено.</string>
+    <string name="delete_all_label">Изтрий всички</string>
+    <string name="cancel_label">Отказ</string>
+    <string name="alert_history_cleared">Историята на сигналите е изтрита</string>
+
+    <!-- Alert Filter Types -->
+    <string name="filter_all_alerts">Всички сигнали</string>
+    <string name="filter_cry_detection">Засичане на плач</string>
+    <string name="filter_motion_detection">Засичане на движение</string>
+    <string name="filter_sos_alerts">SOS сигнали</string>
+    <string name="filter_device_status">Статус на устройство</string>
+    <string name="filter_call_events">Събития при обаждане</string>
+    <string name="filter_all_short">Всички</string>
+    <string name="filter_cry_short">Плач</string>
+    <string name="filter_motion_short">Движение</string>
+    <string name="filter_sos_short">SOS</string>
+    <string name="filter_device_short">Устр.</string>
+    <string name="filter_call_short">Обажд.</string>
+
+    <!-- Retention Labels -->
+    <string name="retention_all">Запазват се всички сигнали</string>
+    <string name="retention_24_hours">Съхранение: 24 часа</string>
+    <string name="retention_7_days">Съхранение: 7 дни</string>
+    <string name="alert_count_format">%d сигнала</string>
+
+    <!-- Device Status Card -->
+    <string name="device_status_online">Онлайн</string>
+    <string name="device_status_offline">Офлайн</string>
+    <string name="device_battery_format">Батерия: %d%%</string>
+    <string name="device_network_wifi">WiFi</string>
+    <string name="device_network_cellular">Мобилна мрежа</string>
+    <string name="device_network_unknown">Неизвестно</string>
+    <string name="device_monitoring_active">Наблюдението е активно</string>
+    <string name="device_monitoring_inactive">Наблюдението не е активно</string>
+
+    <!-- Alert Type Labels -->
+    <string name="alert_type_cry">Открит плач</string>
+    <string name="alert_type_motion">Открито движение</string>
+    <string name="alert_type_sos">SOS активиран</string>
+    <string name="alert_type_camera_obstructed">Камерата е закрита</string>
+    <string name="alert_type_device_offline">Устройството е офлайн</string>
+    <string name="alert_type_low_battery">Ниска батерия</string>
+    <string name="alert_type_call_started">Обаждане започна</string>
+    <string name="alert_type_call_ended">Обаждане приключи</string>
+
+    <!-- Live View Screen -->
+    <string name="live_view_title">Изглед на живо</string>
+    <string name="live_view_connecting">Свързване с устройството...</string>
+    <string name="live_view_connected">Поток на живо е активен</string>
+    <string name="live_view_disconnected">Прекъснато</string>
+    <string name="live_view_error">Грешка при свързване: %s</string>
+    <string name="talk_back_label">Обратен разговор</string>
+    <string name="talk_back_description">Задръжте, за да говорите с детето си</string>
+    <string name="end_live_view_label">Край на изглед на живо</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_notifications">Известия</string>
+    <string name="settings_retention_policy">Съхранение на сигнали</string>
+    <string name="settings_pairing">Свързване на устройство</string>
+    <string name="settings_unpair_device">Прекъсване на свързване</string>
+    <string name="settings_unpair_confirm_title">Прекъсване на свързването с това устройство?</string>
+    <string name="settings_unpair_confirm_message">Повече няма да получавате сигнали от това детско устройство.</string>
+    <string name="settings_unpair_button">Прекъснете свързването</string>
+    <string name="settings_version">Версия %s</string>
+    <string name="settings_privacy_policy">Политика за поверителност</string>
+
+    <!-- Generic -->
+    <string name="unknown_error">Възникна неизвестна грешка</string>
+    <string name="retry_label">Повторен опит</string>
+    <string name="ok_label">OK</string>
+    <string name="close_label">Затворете</string>
+    <string name="save_label">Запази</string>
+    <!-- Pairing Screen -->
+    <string name="pairing_pair_new_device">Свързване на ново устройство</string>
+    <string name="pairing_connect_to_child">Свързване с детско устройство</string>
+    <string name="pairing_enter_code_instruction">Въведете кода, показан на устройството на детето, за да се свържете.</string>
+    <string name="pairing_session_id_label">ID на сесия за свързване</string>
+    <string name="pairing_session_id_hint">Въведете ID на сесията</string>
+    <string name="pairing_code_label">Код за свързване</string>
+    <string name="pairing_code_hint">напр. ABC123</string>
+    <string name="pairing_connect_button">Свързване</string>
+    <string name="pairing_connecting">Свързване...</string>
+    <string name="pairing_waiting">Изчакване на детско устройство...</string>
+    <string name="pairing_paired_successfully">Успешно свързване!</string>
+    <string name="pairing_paired_message">Вашето устройство вече е свързано с устройството на детето.</string>
+    <string name="pairing_continue_dashboard">Към таблото</string>
+    <string name="pairing_invalid_code">Моля, въведете 6-знаков код за свързване.</string>
+    <string name="pairing_invalid_session_id">Моля, въведете ID на сесия за свързване.</string>
+    <string name="pairing_device_description">Свързване с детско устройство</string>
+    <string name="pair_button_label">Свързване</string>
+</resources>

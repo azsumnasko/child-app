@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ChildHelper Parent</string>
+
+    <!-- Parent Dashboard Screen -->
+    <string name="dashboard_title">Parent Dashboard</string>
+    <string name="settings_label">Settings</string>
+    <string name="live_view_label">Live View</string>
+    <string name="live_view_description">Watch and listen live</string>
+    <string name="history_label">History</string>
+    <string name="alert_history_label">Alert History</string>
+    <string name="alert_history_description">View past alerts</string>
+    <string name="settings_description">Configure preferences</string>
+    <string name="recent_alerts_title">Recent Alerts</string>
+    <string name="view_all_label">View All</string>
+
+    <!-- Alert History Screen -->
+    <string name="alert_history_title">Alert History</string>
+    <string name="navigate_back_description">Navigate back</string>
+    <string name="filter_alerts_description">Filter alerts</string>
+    <string name="export_history_description">Export history</string>
+    <string name="delete_all_history_description">Delete all history</string>
+    <string name="no_alerts_found">No alerts found</string>
+    <string name="no_alerts_filter_hint">Try changing the filter</string>
+    <string name="export_dialog_title">Export Alert History</string>
+    <string name="export_no_alerts">No alerts to export.</string>
+    <string name="export_privacy_notice">Privacy-safe metadata export (no audio/video):</string>
+    <string name="done_label">Done</string>
+    <string name="clear_all_history_title">Clear All History?</string>
+    <string name="clear_all_history_message">This will permanently delete all %d alert records from this device. This action cannot be undone.</string>
+    <string name="delete_all_label">Delete All</string>
+    <string name="cancel_label">Cancel</string>
+    <string name="alert_history_cleared">Alert history cleared</string>
+
+    <!-- Alert Filter Types -->
+    <string name="filter_all_alerts">All Alerts</string>
+    <string name="filter_cry_detection">Cry Detection</string>
+    <string name="filter_motion_detection">Motion Detection</string>
+    <string name="filter_sos_alerts">SOS Alerts</string>
+    <string name="filter_device_status">Device Status</string>
+    <string name="filter_call_events">Call Events</string>
+    <string name="filter_all_short">All</string>
+    <string name="filter_cry_short">Cry</string>
+    <string name="filter_motion_short">Motion</string>
+    <string name="filter_sos_short">SOS</string>
+    <string name="filter_device_short">Device</string>
+    <string name="filter_call_short">Call</string>
+
+    <!-- Retention Labels -->
+    <string name="retention_all">Keeping all alerts</string>
+    <string name="retention_24_hours">Retention: 24 hours</string>
+    <string name="retention_7_days">Retention: 7 days</string>
+    <string name="alert_count_format">%d alerts</string>
+
+    <!-- Device Status Card -->
+    <string name="device_status_online">Online</string>
+    <string name="device_status_offline">Offline</string>
+    <string name="device_battery_format">Battery: %d%%</string>
+    <string name="device_network_wifi">WiFi</string>
+    <string name="device_network_cellular">Cellular</string>
+    <string name="device_network_unknown">Unknown</string>
+    <string name="device_monitoring_active">Monitoring active</string>
+    <string name="device_monitoring_inactive">Monitoring inactive</string>
+
+    <!-- Alert Type Labels -->
+    <string name="alert_type_cry">Cry Detected</string>
+    <string name="alert_type_motion">Motion Detected</string>
+    <string name="alert_type_sos">SOS Activated</string>
+    <string name="alert_type_camera_obstructed">Camera Obstructed</string>
+    <string name="alert_type_device_offline">Device Offline</string>
+    <string name="alert_type_low_battery">Low Battery</string>
+    <string name="alert_type_call_started">Call Started</string>
+    <string name="alert_type_call_ended">Call Ended</string>
+
+    <!-- Live View Screen -->
+    <string name="live_view_title">Live View</string>
+    <string name="live_view_connecting">Connecting to device...</string>
+    <string name="live_view_connected">Live stream active</string>
+    <string name="live_view_disconnected">Disconnected</string>
+    <string name="live_view_error">Connection error: %s</string>
+    <string name="talk_back_label">Talk Back</string>
+    <string name="talk_back_description">Hold to speak to your child</string>
+    <string name="end_live_view_label">End Live View</string>
+
+    <!-- Settings Screen -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_retention_policy">Alert Retention</string>
+    <string name="settings_pairing">Device Pairing</string>
+    <string name="settings_unpair_device">Unpair Device</string>
+    <string name="settings_unpair_confirm_title">Unpair this device?</string>
+    <string name="settings_unpair_confirm_message">You will no longer receive alerts from this child device.</string>
+    <string name="settings_unpair_button">Unpair</string>
+    <string name="settings_version">Version %s</string>
+    <string name="settings_privacy_policy">Privacy Policy</string>
+
+    <!-- Generic -->
+    <string name="unknown_error">An unknown error occurred</string>
+    <string name="retry_label">Retry</string>
+    <string name="ok_label">OK</string>
+    <string name="close_label">Close</string>
+    <string name="save_label">Save</string>
+
+    <!-- Pairing Screen -->
+    <string name="pairing_pair_new_device">Pair New Device</string>
+    <string name="pairing_connect_to_child">Connect to Child Device</string>
+    <string name="pairing_enter_code_instruction">Enter the code shown on your child\'s device to connect.</string>
+    <string name="pairing_session_id_label">Pairing Session ID</string>
+    <string name="pairing_session_id_hint">Enter the session ID</string>
+    <string name="pairing_code_label">Pairing Code</string>
+    <string name="pairing_code_hint">e.g. ABC123</string>
+    <string name="pairing_connect_button">Connect</string>
+    <string name="pairing_connecting">Connecting...</string>
+    <string name="pairing_waiting">Waiting for child device...</string>
+    <string name="pairing_paired_successfully">Paired Successfully!</string>
+    <string name="pairing_paired_message">Your device is now connected to the child\'s device.</string>
+    <string name="pairing_continue_dashboard">Continue to Dashboard</string>
+    <string name="pairing_invalid_code">Please enter a 6-character pairing code.</string>
+    <string name="pairing_invalid_session_id">Please enter a pairing session ID.</string>
+    <string name="pairing_device_description">Connect to a child device</string>
+    <string name="pair_button_label">Pair</string>
+</resources>

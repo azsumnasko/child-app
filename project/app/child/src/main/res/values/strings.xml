@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ChildHelper</string>
+
+    <!-- Child Home Screen -->
+    <string name="sos_button_description">SOS Emergency Button. Hold for 2 seconds to send emergency alert to guardians.</string>
+    <string name="sos_button_description_fab">SOS Emergency Button. Hold for 2 seconds to activate emergency alert.</string>
+    <string name="home_greeting_title">Who would you like to call?</string>
+    <string name="home_greeting_subtitle">Tap a picture to call</string>
+    <string name="home_welcome_message">Tap Mom or Dad to call. Hold the SOS button for help.</string>
+    <string name="status_online">Device is online.</string>
+    <string name="status_offline">Device is offline.</string>
+    <string name="status_battery_format">Battery at %d percent.</string>
+    <string name="status_monitoring_active">Monitoring is active.</string>
+    <string name="status_monitoring_inactive">Monitoring is off.</string>
+    <string name="status_watching">Watching</string>
+    <string name="status_idle">Idle</string>
+    <string name="bedtime_button_description">Bedtime mode. Tap to enter calming bedtime mode.</string>
+    <string name="monitoring_active_title">Keeping you safe</string>
+    <string name="monitoring_inactive_title">Monitoring off</string>
+    <string name="monitoring_active_subtitle">Listening for cries and motion</string>
+    <string name="monitoring_inactive_subtitle">Tap to start protection</string>
+    <string name="monitoring_content_description_active">Monitoring is active. Your device is listening and watching to keep you safe.</string>
+    <string name="monitoring_content_description_inactive">Monitoring is off. Tap to start monitoring.</string>
+    <string name="monitoring_start">Start</string>
+    <string name="monitoring_stop">Stop</string>
+    <string name="audio_call_mom_description">Audio only call to Mom. No video.</string>
+    <string name="audio_call_dad_description">Audio only call to Dad. No video.</string>
+    <string name="audio_call_mom_label">Audio Mom</string>
+    <string name="audio_call_dad_label">Audio Dad</string>
+    <string name="contact_mom_description">Call Mom</string>
+    <string name="contact_dad_description">Call Dad</string>
+    <string name="contact_guardian_description">Call Guardian</string>
+
+    <!-- SOS Screen -->
+    <string name="sos_title">SOS</string>
+    <string name="sos_activated">SOS Alert Sent</string>
+    <string name="sos_countdown_format">SOS in %d...</string>
+    <string name="sos_voice_prompt">SOS activated. Help is being notified. Stay calm.</string>
+    <string name="sos_countdown_voice">%d</string>
+    <string name="sos_notifying_voice">Notifying guardians now.</string>
+    <string name="sos_notified_voice">Guardians have been notified. Help is on the way.</string>
+    <string name="sos_cancelled_voice">SOS cancelled.</string>
+    <string name="sos_button_compact_description">SOS button. Hold for 2 seconds to activate emergency alert.</string>
+
+    <!-- Call Screen -->
+    <string name="call_connecting">Connecting...</string>
+    <string name="call_ringing">Ringing...</string>
+    <string name="call_please_wait">Please wait...</string>
+    <string name="call_audio_only">Audio Only</string>
+    <string name="call_info_format">Call with %1$s. Duration %2$s.</string>
+    <string name="call_audio_only_suffix">Audio only mode.</string>
+    <string name="call_status_suffix">Status: %s.</string>
+    <string name="call_end_description">End call. Tap to hang up.</string>
+    <string name="call_mute_description">Mute microphone</string>
+    <string name="call_unmute_description">Unmute microphone</string>
+    <string name="call_video_on_description">Turn video on</string>
+    <string name="call_video_off_description">Turn video off</string>
+    <string name="call_switch_camera_description">Switch camera</string>
+    <string name="call_speaker_on_description">Turn speaker off</string>
+    <string name="call_speaker_off_description">Turn speaker on</string>
+    <string name="call_voice_calling">Calling %s</string>
+    <string name="call_voice_ending">Ending call</string>
+    <string name="call_voice_connected">Call connected</string>
+    <string name="call_voice_ended">Call ended</string>
+    <string name="call_voice_error">Call error: %s</string>
+    <string name="call_voice_microphone_off">Microphone off</string>
+    <string name="call_voice_microphone_on">Microphone on</string>
+
+    <!-- Bedtime Mode Screen -->
+    <string name="bedtime_mode_title">Bedtime Mode</string>
+    <string name="bedtime_mode_active">Sleep well</string>
+    <string name="bedtime_mode_preparing">Preparing...</string>
+    <string name="bedtime_header_description_active">Bedtime mode is active. Good night.</string>
+    <string name="bedtime_header_description_starting">Bedtime mode is starting. Good night.</string>
+    <string name="bedtime_exit_description">Exit bedtime mode. Tap to return to normal mode.</string>
+    <string name="bedtime_calm_message">You are safe</string>
+    <string name="bedtime_calm_submessage">Mom and Dad are watching over you</string>
+    <string name="bedtime_moon_description">Calming moon. Tap to hear a comforting message.</string>
+    <string name="bedtime_play_message_description">Tap to hear a calming message.</string>
+    <string name="bedtime_screen_brightness">Screen Brightness</string>
+    <string name="bedtime_brightness_slider_description">Screen brightness slider. Current value %d percent.</string>
+    <string name="bedtime_auto_answer_title">Auto-answer calls</string>
+    <string name="bedtime_auto_answer_subtitle">Answer Mom/Dad calls automatically</string>
+    <string name="bedtime_auto_answer_on_voice">Auto answer is on. Calls will be answered automatically.</string>
+    <string name="bedtime_auto_answer_off_voice">Auto answer is off.</string>
+    <string name="bedtime_monitoring_active">Cry and motion monitoring is active during bedtime.</string>
+    <string name="bedtime_monitoring_inactive">Monitoring will start automatically when you fall asleep.</string>
+    <string name="bedtime_listening_active">Listening for you</string>
+    <string name="bedtime_listening_ready">Ready to listen</string>
+    <string name="bedtime_welcome_voice">Bedtime mode is on. Sleep well. I am watching over you.</string>
+    <string name="bedtime_good_morning_voice">Good morning. Bedtime mode is off.</string>
+
+    <!-- Monitoring Service Notification -->
+    <string name="monitoring_notification_title">Child Monitoring Active</string>
+    <string name="monitoring_notification_text">Keeping your child safe. Cry and motion detection running.</string>
+    <string name="monitoring_notification_stop_action">Stop Monitoring</string>
+
+    <!-- Detection Events -->
+    <string name="cry_detected">Cry Detected</string>
+    <string name="motion_detected">Motion Detected</string>
+    <string name="camera_obstructed">Camera Obstructed</string>
+
+    <!-- Generic -->
+    <string name="voice_calling_mom">Calling Mom</string>
+    <string name="monitoring_started_voice">Monitoring started</string>
+    <string name="monitoring_stopped_voice">Monitoring stopped</string>
+    <string name="bedtime_mode_voice">Bedtime mode</string>
+    <string name="monitoring_service_description">Continuous cry and motion monitoring for child safety</string>
+    <string name="call_service_description">WebRTC voice and video calling service</string>
+
+    <!-- Pairing Screen -->
+    <string name="pairing_title">Pair with Parent</string>
+    <string name="pairing_connect_to_parent">Connect to Parent</string>
+    <string name="pairing_generate_description">Generate a code to pair with your parent\'s device.</string>
+    <string name="pairing_generate_button">Generate Pairing Code</string>
+    <string name="pairing_generating">Generating pairing code...</string>
+    <string name="pairing_your_code">Your Pairing Code</string>
+    <string name="pairing_show_code_instruction">Show this code to your parent to connect</string>
+    <string name="pairing_cancel">Cancel</string>
+    <string name="pairing_connected_title">Connected!</string>
+    <string name="pairing_connected_message">Your device is now paired with your parent.</string>
+    <string name="pairing_done">Done</string>
+    <string name="pairing_error_title">Oops!</string>
+    <string name="pairing_try_again">Try Again</string>
+    <string name="pairing_button">Pair</string>
+</resources>

@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!--
+        Privacy-First Permissions:
+        - RECORD_AUDIO: For cry detection via AudioRecord (NOT MediaRecorder)
+        - CAMERA: For motion detection via CameraX ImageAnalysis (NOT video recording)
+        - INTERNET: For WebRTC signaling and FCM push notifications
+        - ACCESS_NETWORK_STATE: For network quality monitoring
+        - FOREGROUND_SERVICE: For continuous monitoring
+        - FOREGROUND_SERVICE_CAMERA: Camera access in foreground service
+        - FOREGROUND_SERVICE_MICROPHONE: Microphone access in foreground service
+        - POST_NOTIFICATIONS: For alert notifications to guardians
+        - VIBRATE: For SOS haptic feedback
+        - WAKE_LOCK: To keep monitoring active when screen is off
+        - ACCESS_FINE_LOCATION / COARSE_LOCATION: For SOS events only (optional, best-effort)
+    -->
+
+    <!-- Audio for cry detection -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Camera for motion detection -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Network for WebRTC signaling and push notifications -->
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+
+    <!-- Foreground service for continuous monitoring -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Haptic feedback for SOS -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
+    <!-- Wake lock for continuous monitoring -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Location for SOS events (optional, best-effort) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+
+    <!-- WiFi Direct for P2P communication (no server needed) -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation"
+        tools:targetApi="tiramisu" />
+
+    <!-- Feature declarations -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+    <application
+        android:name=".ChildApp"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.ChildApp"
+        android:usesCleartextTraffic="false"
+        tools:targetApi="36">
+
+        <!-- Main Activity -->
+        <activity
+            android:name=".ui.home.ChildHomeActivity"
+            android:exported="true"
+            android:screenOrientation="portrait"
+            android:theme="@style/Theme.ChildApp"
+            android:windowSoftInputMode="adjustResize">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Monitoring Service (foreground) -->
+        <service
+            android:name=".service.MonitoringService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="camera|microphone"
+            android:description="@string/monitoring_service_description" />
+
+        <!-- Call Service (foreground) -->
+        <service
+            android:name=".service.CallService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="microphone|camera|phoneCall"
+            android:description="@string/call_service_description" />
+
+        <!-- FCM Push Notification Service -->
+        <service
+            android:name="com.childhelper.core.network.push.FcmService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- Boot receiver to restart monitoring after device reboot -->
+        <receiver
+            android:name=".service.BootReceiver"
+            android:enabled="true"
+            android:exported="true"
+            android:directBootAware="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Firebase Cloud Messaging metadata -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="child_alerts" />
+
+    </application>
+
+</manifest>
