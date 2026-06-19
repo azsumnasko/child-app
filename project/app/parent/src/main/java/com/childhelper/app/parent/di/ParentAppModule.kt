@@ -1,6 +1,7 @@
 package com.childhelper.app.parent.di
 
 import android.content.Context
+import android.util.Base64
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
@@ -16,7 +17,6 @@ import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.runBlocking
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
@@ -49,38 +49,29 @@ object ParentAppModule {
     @Provides
     @Singleton
     fun provideDatabasePassphrase(
-        securePreferences: SecurePreferences
+        @ApplicationContext context: Context
     ): ByteArray {
-        // Try in-memory cache first (fast path, no blocking)
         cachedPassphrase?.let { return it }
 
-        return try {
-            runBlocking {
-                val stored = securePreferences.getString(PREF_KEY_DB_PASSPHRASE)
-                if (stored != null) {
-                    val key = stored.toByteArray(Charsets.UTF_8)
-                    cachedPassphrase = key
-                    key
-                } else {
-                    val newKey = AppDatabase.generatePassphrase()
-                    securePreferences.putString(
-                        PREF_KEY_DB_PASSPHRASE,
-                        String(newKey, Charsets.UTF_8)
-                    )
-                    cachedPassphrase = newKey
-                    newKey
-                }
-            }
-        } catch (e: Exception) {
-            cachedPassphrase ?: AppDatabase.generatePassphrase().also {
-                cachedPassphrase = it
-            }
+        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val stored = prefs.getString(PREF_KEY_DB_PASSPHRASE, null)
+
+        val key: ByteArray = if (stored != null) {
+            Base64.decode(stored, Base64.NO_WRAP)
+        } else {
+            val newKey = AppDatabase.generatePassphrase()
+            prefs.edit().putString(PREF_KEY_DB_PASSPHRASE, Base64.encodeToString(newKey, Base64.NO_WRAP)).apply()
+            newKey
         }
+
+        cachedPassphrase = key
+        return key
     }
 
     @Volatile
     private var cachedPassphrase: ByteArray? = null
 
+    private const val PREFS_NAME = "db_prefs"
     private const val PREF_KEY_DB_PASSPHRASE = "db_passphrase"
 
     /**

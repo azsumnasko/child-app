@@ -18,5 +18,6 @@ import kotlinx.serialization.Serializable
 data class CompletePairingRequest(
     val sessionId: String,
     val parentDeviceId: String,
-    val parentPublicKey: String
+    val parentPublicKey: String,
+    val pairingCode: String
 )

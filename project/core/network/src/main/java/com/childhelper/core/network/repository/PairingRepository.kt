@@ -67,7 +67,8 @@ class PairingRepository @Inject constructor(
         val request = CompletePairingRequest(
             sessionId = sessionId,
             parentDeviceId = parentDeviceId,
-            parentPublicKey = parentPublicKeyB64
+            parentPublicKey = parentPublicKeyB64,
+            pairingCode = code
         )
 
         val result = safeCallAsync(ErrorCode.NETWORK_ERROR) {

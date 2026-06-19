@@ -9,7 +9,7 @@ import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 
 @Serializable data class InitiatePairingRequest(val childDeviceId: String, val childPublicKey: String)
-@Serializable data class CompletePairingRequest(val sessionId: String, val parentDeviceId: String, val parentPublicKey: String)
+@Serializable data class CompletePairingRequest(val sessionId: String, val parentDeviceId: String, val parentPublicKey: String, val pairingCode: String)
 @Serializable data class RevokePairingRequest(val sessionId: String, val deviceId: String)
 
 fun Application.pairingRoutes(store: PairingStore) {
@@ -22,7 +22,7 @@ fun Application.pairingRoutes(store: PairingStore) {
             }
             post("/complete") {
                 val req = call.receive<CompletePairingRequest>()
-                val session = store.completePairing(req.sessionId, req.parentDeviceId, req.parentPublicKey)
+                val session = store.completePairing(req.sessionId, req.parentDeviceId, req.parentPublicKey, req.pairingCode)
                 if (session != null) call.respond(HttpStatusCode.OK, session)
                 else call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid or expired pairing session"))
             }

@@ -93,33 +93,58 @@ class ChildPairingViewModel @Inject constructor(
         _errorMessage.value = null
 
         viewModelScope.launch {
-            val deviceId = securePreferences.getString("device_id")
-                ?: java.util.UUID.randomUUID().toString().also { id ->
-                    securePreferences.putString("device_id", id)
-                }
+            try {
+                val deviceId = securePreferences.getString("device_id")
+                    ?: java.util.UUID.randomUUID().toString().also { id ->
+                        securePreferences.putString("device_id", id)
+                    }
 
-            p2pManager.initialize("ChildHelper-$deviceId".take(20))
-            p2pManager.startDiscovery()
-            _sessionId.value = deviceId
+                // Generate key pair for P2P identity
+                val keyPair = keystoreManager.generateKeyPair("child_p2p_key_$deviceId")
+                val publicKey = keyPair.public.encoded?.let {
+                    java.util.Base64.getEncoder().encodeToString(it)
+                } ?: ""
 
-            p2pJob = viewModelScope.launch {
-                p2pManager.peerFlow.collect { state ->
-                    when (state) {
-                        is LocalPeerState.Connected -> {
-                            _pairingState.value = PairingState.PAIRED
+                // Generate QR data
+                val qrContent = qrPairingManager.generatePairingData(
+                    deviceId = deviceId,
+                    deviceName = "ChildHelper",
+                    publicKey = publicKey
+                )
+                _qrData.value = qrContent
+                _sessionId.value = deviceId
+
+                // Start WiFi Direct discovery
+                p2pManager.initialize("ChildHelper-$deviceId".take(20))
+                p2pManager.startDiscovery()
+
+                // Show QR code while waiting for parent
+                _pairingState.value = PairingState.WAITING
+
+                // Monitor connection state
+                p2pJob = launch {
+                    p2pManager.peerFlow.collect { state ->
+                        when (state) {
+                            is LocalPeerState.Connected -> {
+                                _pairingState.value = PairingState.PAIRED
+                            }
+                            is LocalPeerState.Error -> {
+                                _errorMessage.value = state.message
+                                _pairingState.value = PairingState.ERROR
+                            }
+                            else -> {}
                         }
-                        is LocalPeerState.Error -> {
-                            _errorMessage.value = state.message
-                            _pairingState.value = PairingState.ERROR
-                        }
-                        else -> {}
                     }
                 }
-            }
 
-            p2pManager.discoveredPeers.collect { peers ->
-                // Auto-connect to first peer found
-                peers.firstOrNull()?.let { p2pManager.connectToPeer(it) }
+                launch {
+                    p2pManager.discoveredPeers.collect { peers ->
+                        peers.firstOrNull()?.let { p2pManager.connectToPeer(it) }
+                    }
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = e.message ?: "P2P pairing failed"
+                _pairingState.value = PairingState.ERROR
             }
         }
     }

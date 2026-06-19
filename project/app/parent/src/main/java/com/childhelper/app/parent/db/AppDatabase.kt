@@ -32,15 +32,33 @@ abstract class AppDatabase : RoomDatabase() {
             passphrase: ByteArray
         ): AppDatabase {
             val factory = SupportFactory(passphrase)
+            val dbFile = context.getDatabasePath(DATABASE_NAME)
 
-            return Room.databaseBuilder(
-                context.applicationContext,
-                AppDatabase::class.java,
-                DATABASE_NAME
-            )
-                .openHelperFactory(factory)
-                .fallbackToDestructiveMigration()
-                .build()
+            return try {
+                Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    DATABASE_NAME
+                )
+                    .openHelperFactory(factory)
+                    .fallbackToDestructiveMigration()
+                    .build()
+            } catch (e: Exception) {
+                // Database corrupted or passphrase changed — delete and recreate
+                dbFile.delete()
+                dbFile.parentFile?.listFiles()?.filter {
+                    it.name.startsWith(DATABASE_NAME)
+                }?.forEach { it.delete() }
+
+                Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    DATABASE_NAME
+                )
+                    .openHelperFactory(factory)
+                    .fallbackToDestructiveMigration()
+                    .build()
+            }
         }
 
         /**

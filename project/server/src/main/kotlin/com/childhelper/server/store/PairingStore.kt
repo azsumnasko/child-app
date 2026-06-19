@@ -36,9 +36,10 @@ class PairingStore {
         return session
     }
 
-    fun completePairing(sessionId: String, parentDeviceId: String, parentPublicKey: String): PairingSession? {
+    fun completePairing(sessionId: String, parentDeviceId: String, parentPublicKey: String, pairingCode: String): PairingSession? {
         val session = getSession(sessionId) ?: return null
         if (session.status != PairingStatus.PENDING) return null
+        if (session.pairingCode != pairingCode.uppercase().trim()) return null
         val completed = session.copy(
             parentDeviceId = parentDeviceId, parentPublicKey = parentPublicKey,
             status = PairingStatus.COMPLETED

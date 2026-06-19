@@ -5,6 +5,7 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
+import android.util.Log
 import com.childhelper.core.security.LocaleManager
 import com.childhelper.core.security.SecurePreferences
 import dagger.hilt.android.HiltAndroidApp
@@ -24,6 +25,10 @@ class ChildApp : Application() {
     }
 
     private fun initLocale() {
+        if (!::securePreferences.isInitialized) {
+            Log.w(TAG, "SecurePreferences not yet injected — skipping locale init")
+            return
+        }
         try {
             runBlocking {
                 val lang = securePreferences.getString(LocaleManager.PREF_KEY_LANGUAGE)
@@ -31,50 +36,37 @@ class ChildApp : Application() {
                     LocaleManager.cacheLanguage(lang)
                 }
             }
-        } catch (_: Exception) {
-            // Fall back to system default
+        } catch (e: Exception) {
+            Log.w(TAG, "Locale init failed", e)
         }
     }
 
     private fun createNotificationChannels() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channels = listOf(
-                NotificationChannel(
-                    CHANNEL_MONITORING,
-                    "Child Monitoring",
-                    NotificationManager.IMPORTANCE_LOW
-                ).apply {
-                    description = "Continuous monitoring for cry and motion detection"
-                    setShowBadge(false)
-                },
-                NotificationChannel(
-                    CHANNEL_ALERTS,
-                    "Safety Alerts",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Important safety alerts from the child device"
-                    enableVibration(true)
-                },
-                NotificationChannel(
-                    CHANNEL_CALL,
-                    "Voice/Video Calls",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "Incoming and ongoing calls"
-                    enableVibration(true)
-                },
-                NotificationChannel(
-                    CHANNEL_SOS,
-                    "SOS Emergency",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "SOS emergency alerts"
-                    enableVibration(true)
-                }
-            )
-
-            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            notificationManager.createNotificationChannels(channels)
+            try {
+                val channels = listOf(
+                    NotificationChannel(CHANNEL_MONITORING, "Child Monitoring", NotificationManager.IMPORTANCE_LOW).apply {
+                        description = "Continuous monitoring for cry and motion detection"
+                        setShowBadge(false)
+                    },
+                    NotificationChannel(CHANNEL_ALERTS, "Safety Alerts", NotificationManager.IMPORTANCE_HIGH).apply {
+                        description = "Important safety alerts from the child device"
+                        enableVibration(true)
+                    },
+                    NotificationChannel(CHANNEL_CALL, "Voice/Video Calls", NotificationManager.IMPORTANCE_HIGH).apply {
+                        description = "Incoming and ongoing calls"
+                        enableVibration(true)
+                    },
+                    NotificationChannel(CHANNEL_SOS, "SOS Emergency", NotificationManager.IMPORTANCE_HIGH).apply {
+                        description = "SOS emergency alerts"
+                        enableVibration(true)
+                    }
+                )
+                val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                nm.createNotificationChannels(channels)
+            } catch (e: Exception) {
+                Log.w(TAG, "Notification channel creation failed", e)
+            }
         }
     }
 
@@ -83,5 +75,6 @@ class ChildApp : Application() {
         const val CHANNEL_ALERTS = "child_alerts"
         const val CHANNEL_CALL = "child_call"
         const val CHANNEL_SOS = "child_sos"
+        private const val TAG = "ChildApp"
     }
 }

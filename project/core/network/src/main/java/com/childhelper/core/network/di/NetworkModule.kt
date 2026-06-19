@@ -213,11 +213,19 @@ object NetworkModule {
     @Singleton
     fun provideDeviceIdProvider(
         securePreferences: com.childhelper.core.security.SecurePreferences
-    ): DeviceIdProvider = {
-        kotlinx.coroutines.runBlocking {
-            securePreferences.getString("device_id", "") ?: ""
+    ): DeviceIdProvider {
+        return {
+            if (cachedDeviceId != null) cachedDeviceId!!
+            else kotlinx.coroutines.runBlocking {
+                val id = securePreferences.getString("device_id", "") ?: ""
+                cachedDeviceId = id
+                id
+            }
         }
     }
+
+    @Volatile
+    private var cachedDeviceId: String? = null
 
     // Timeouts
     private const val CONNECT_TIMEOUT_SECONDS = 15L
