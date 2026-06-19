@@ -54,6 +54,15 @@ interface PairingApi {
     ): PairingSession
 
     /**
+     * Completes pairing using only the 6-character code (no session ID needed).
+     * The server finds the pending session by code.
+     */
+    @POST("/api/v1/pairing/complete-by-code")
+    suspend fun completeByCode(
+        @Body request: kotlinx.serialization.json.JsonObject
+    ): PairingSession
+
+    /**
      * Revokes an active pairing session, permanently unlinking the two devices.
      *
      * Either device can call this to terminate the pairing relationship.

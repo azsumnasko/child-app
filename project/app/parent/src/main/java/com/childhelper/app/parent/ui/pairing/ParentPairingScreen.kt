@@ -58,7 +58,6 @@ fun ParentPairingScreen(
     val enteredCode by viewModel.code.collectAsState()
     val state by viewModel.pairingState.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
-    val sessionId by viewModel.sessionId.collectAsState()
     val isP2p by viewModel.isP2pMode.collectAsState()
     val discovered by viewModel.discoveredDevices.collectAsState()
     val context = LocalContext.current
@@ -126,10 +125,8 @@ fun ParentPairingScreen(
                 PairingState.ERROR -> {
                     IdleContent(
                         enteredCode = enteredCode,
-                        sessionId = sessionId,
                         errorMessage = errorMessage,
                         onCodeChange = { viewModel.onCodeChange(it) },
-                        onSessionIdChange = { viewModel.setSessionId(it) },
                         onSubmit = { viewModel.submitCode() },
                         onScanQr = { qrScannerLauncher.launch(scanOptions) },
                         onNearbyPairing = { viewModel.startP2pDiscovery() },
@@ -161,10 +158,8 @@ fun ParentPairingScreen(
 @Composable
 private fun IdleContent(
     enteredCode: String,
-    sessionId: String,
     errorMessage: String?,
     onCodeChange: (String) -> Unit,
-    onSessionIdChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onScanQr: () -> Unit,
     onNearbyPairing: () -> Unit,
@@ -191,24 +186,6 @@ private fun IdleContent(
         )
 
         Spacer(modifier = Modifier.height(32.dp))
-
-        OutlinedTextField(
-            value = sessionId,
-            onValueChange = { onSessionIdChange(it.take(36)) },
-            label = { Text(stringResource(R.string.pairing_session_id_label)) },
-            placeholder = { Text(stringResource(R.string.pairing_session_id_hint)) },
-            singleLine = true,
-            modifier = Modifier
-                .fillMaxWidth()
-                .semantics { contentDescription = "Pairing session ID input field" },
-            shape = RoundedCornerShape(12.dp),
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.None,
-                imeAction = ImeAction.Next
-            )
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
 
         OutlinedTextField(
             value = enteredCode,
@@ -248,7 +225,7 @@ private fun IdleContent(
                 .height(56.dp)
                 .semantics { contentDescription = "Connect to child device" },
             shape = RoundedCornerShape(14.dp),
-            enabled = enteredCode.length == 6 && sessionId.isNotBlank()
+            enabled = enteredCode.length == 6
         ) {
             Text(
                 text = stringResource(R.string.pairing_connect_button),

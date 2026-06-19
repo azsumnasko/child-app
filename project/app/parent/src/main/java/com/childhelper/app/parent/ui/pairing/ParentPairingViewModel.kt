@@ -36,24 +36,22 @@ class ParentPairingViewModel @Inject constructor(
     private val _errorMessage = MutableStateFlow<String?>(null)
     val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
 
-    private val _sessionId = MutableStateFlow("")
-    val sessionId: StateFlow<String> = _sessionId.asStateFlow()
-
     private val _isP2pMode = MutableStateFlow(false)
     val isP2pMode: StateFlow<Boolean> = _isP2pMode.asStateFlow()
 
     private val _discoveredDevices = MutableStateFlow<List<P2pDevice>>(emptyList())
     val discoveredDevices: StateFlow<List<P2pDevice>> = _discoveredDevices.asStateFlow()
 
-    fun setSessionId(id: String) { _sessionId.value = id }
     fun onCodeChange(newValue: String) { _code.value = newValue }
 
+    /** Server-based pairing — parent enters just the 6-character code */
     fun submitCode() {
-        val enteredCode = _code.value.trim().uppercase()
-        val sid = _sessionId.value.trim()
+        val enteredCode = _code.value.replace(" ", "").uppercase().take(6)
 
-        if (enteredCode.length != 6) { _errorMessage.value = "Please enter a 6-character pairing code."; return }
-        if (sid.isBlank()) { _errorMessage.value = "Please enter a pairing session ID."; return }
+        if (enteredCode.length != 6) {
+            _errorMessage.value = "Please enter a 6-character pairing code."
+            return
+        }
 
         _pairingState.value = PairingState.GENERATING
         _errorMessage.value = null
@@ -61,7 +59,8 @@ class ParentPairingViewModel @Inject constructor(
         viewModelScope.launch {
             val deviceId = securePreferences.getString("device_id")
                 ?: java.util.UUID.randomUUID().toString().also { securePreferences.putString("device_id", it) }
-            when (val r = pairingRepository.completePairing(sid, deviceId, enteredCode)) {
+
+            when (val r = pairingRepository.completeByCode(deviceId, enteredCode)) {
                 is SafeResult.Success -> _pairingState.value = PairingState.PAIRED
                 is SafeResult.Failure -> {
                     _errorMessage.value = r.error
@@ -108,7 +107,6 @@ class ParentPairingViewModel @Inject constructor(
         }
         _isP2pMode.value = true
         _pairingState.value = PairingState.GENERATING
-        _sessionId.value = data.deviceId
         startP2pDiscovery()
     }
 
@@ -117,7 +115,6 @@ class ParentPairingViewModel @Inject constructor(
         _pairingState.value = PairingState.IDLE
         _errorMessage.value = null
         _code.value = ""
-        _sessionId.value = ""
         _isP2pMode.value = false
         _discoveredDevices.value = emptyList()
     }

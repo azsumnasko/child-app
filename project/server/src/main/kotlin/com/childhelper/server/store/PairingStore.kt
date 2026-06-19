@@ -9,6 +9,7 @@ import kotlin.random.Random
 class PairingStore {
     private val sessions = ConcurrentHashMap<String, PairingSession>()
     private val deviceToSession = ConcurrentHashMap<String, String>()
+    private val codeToSession = ConcurrentHashMap<String, String>()
 
     fun createSession(childDeviceId: String, childPublicKey: String): PairingSession {
         val sessionId = UUID.randomUUID().toString()
@@ -23,6 +24,7 @@ class PairingStore {
         )
         sessions[sessionId] = session
         deviceToSession[childDeviceId] = sessionId
+        codeToSession[code] = sessionId
         return session
     }
 
@@ -34,6 +36,11 @@ class PairingStore {
             return expired
         }
         return session
+    }
+
+    fun completeByCode(pairingCode: String, parentDeviceId: String, parentPublicKey: String): PairingSession? {
+        val sessionId = codeToSession[pairingCode.uppercase().trim()] ?: return null
+        return completePairing(sessionId, parentDeviceId, parentPublicKey, pairingCode)
     }
 
     fun completePairing(sessionId: String, parentDeviceId: String, parentPublicKey: String, pairingCode: String): PairingSession? {

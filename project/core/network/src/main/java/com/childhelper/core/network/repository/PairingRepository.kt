@@ -13,6 +13,8 @@ import com.childhelper.core.network.model.RevokePairingRequest
 import com.childhelper.core.security.PairingCrypto
 import com.childhelper.core.security.SecurePreferences
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import java.security.KeyPair
 import java.util.UUID
 import javax.inject.Inject
@@ -88,6 +90,37 @@ class PairingRepository @Inject constructor(
             is SafeResult.Failure -> {
                 localCompleteFallback(sessionId, parentDeviceId, code, parentKeyPair)
             }
+        }
+    }
+
+    suspend fun completeByCode(
+        parentDeviceId: String,
+        code: String
+    ): SafeResult<PairingSession> {
+        val parentKeyPair = pairingCrypto.generateEcdhKeyPair()
+        val parentPublicKeyB64 = CryptoUtil.base64Encode(parentKeyPair.public.encoded)
+
+        val payload = buildJsonObject {
+            put("parentDeviceId", parentDeviceId)
+            put("parentPublicKey", parentPublicKeyB64)
+            put("pairingCode", code)
+        }
+
+        val result = safeCallAsync(ErrorCode.NETWORK_ERROR) {
+            pairingApi.completeByCode(payload)
+        }
+
+        return when (result) {
+            is SafeResult.Success -> {
+                val session = result.data
+                val childPublicKeyB64 = session.childPublicKey ?: return SafeResult.Failure("Server did not return child public key.", ErrorCode.PAIRING_ERROR)
+                deriveAndStoreSharedSecret(parentKeyPair, childPublicKeyB64)
+                storeSession(session)
+                securePreferences.putString("device_id", parentDeviceId)
+                securePreferences.putBoolean("is_paired", true)
+                SafeResult.Success(session)
+            }
+            is SafeResult.Failure -> result
         }
     }
 

@@ -10,6 +10,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable data class InitiatePairingRequest(val childDeviceId: String, val childPublicKey: String)
 @Serializable data class CompletePairingRequest(val sessionId: String, val parentDeviceId: String, val parentPublicKey: String, val pairingCode: String)
+@Serializable data class CompleteByCodeRequest(val parentDeviceId: String, val parentPublicKey: String, val pairingCode: String)
 @Serializable data class RevokePairingRequest(val sessionId: String, val deviceId: String)
 
 fun Application.pairingRoutes(store: PairingStore) {
@@ -25,6 +26,12 @@ fun Application.pairingRoutes(store: PairingStore) {
                 val session = store.completePairing(req.sessionId, req.parentDeviceId, req.parentPublicKey, req.pairingCode)
                 if (session != null) call.respond(HttpStatusCode.OK, session)
                 else call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid or expired pairing session"))
+            }
+            post("/complete-by-code") {
+                val req = call.receive<CompleteByCodeRequest>()
+                val session = store.completeByCode(req.pairingCode, req.parentDeviceId, req.parentPublicKey)
+                if (session != null) call.respond(HttpStatusCode.OK, session)
+                else call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Invalid or expired pairing code"))
             }
             post("/revoke") {
                 val req = call.receive<RevokePairingRequest>()
