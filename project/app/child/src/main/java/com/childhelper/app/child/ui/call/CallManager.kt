@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -145,8 +146,8 @@ class CallManager(
                     audioDeviceManager.startAudioCapture(factory, pc)
                 }
 
-                // Create and send offer via signaling
-                val offer = peerConnectionManager.createOffer()
+                // Create and send offer via signaling (off main thread to avoid ANR)
+                val offer = withContext(Dispatchers.IO) { peerConnectionManager.createOffer() }
                 signalingClient.sendOffer(
                     sessionId = session.sessionId,
                     toDeviceId = toDeviceId,
@@ -172,7 +173,7 @@ class CallManager(
             try {
                 _callState.value = CallState.Connecting(sessionId)
 
-                val answer = peerConnectionManager.createAnswer()
+                val answer = withContext(Dispatchers.IO) { peerConnectionManager.createAnswer() }
                 val callerId = _currentSession.value?.callerId ?: return@launch
                 signalingClient.sendAnswer(
                     sessionId = sessionId,

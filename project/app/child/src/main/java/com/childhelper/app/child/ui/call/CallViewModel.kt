@@ -70,19 +70,19 @@ class CallViewModel @Inject constructor(
         voicePromptManager.initialize()
     }
 
-    fun startCall(contactId: String, hasVideo: Boolean) {
+    fun startCall(contactId: String, hasVideo: Boolean, contactName: String = "") {
         viewModelScope.launch {
-            val contactName = getContactName(contactId)
+            val displayName = contactName.ifBlank { getContactName(contactId) }
             _uiState.update {
                 it.copy(
-                    contactName = contactName,
+                    contactName = displayName,
                     contactId = contactId,
                     hasVideo = hasVideo,
                     status = CallStatusUi.CONNECTING
                 )
             }
 
-            voicePromptManager.speakCallStatus("Calling $contactName")
+            voicePromptManager.speakCallStatus("Calling $displayName")
 
             callManager.initializeWebRtc()
             callManager.initiateCall(contactId, hasVideo)

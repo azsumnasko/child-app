@@ -119,4 +119,15 @@
     <string name="pairing_invalid_session_id">Please enter a pairing session ID.</string>
     <string name="pairing_device_description">Connect to a child device</string>
     <string name="pair_button_label">Pair</string>
+    <string name="pairing_scan_prompt">Scan the child device QR code</string>
+    <string name="pairing_navigate_back_content">Navigate back</string>
+    <string name="pairing_session_id_field_label">Session ID (shown on child app)</string>
+    <string name="pairing_session_id_placeholder">e.g. abc123-...</string>
+    <string name="pairing_code_input_content">Pairing code input field</string>
+    <string name="pairing_connect_content_desc">Connect to child device</string>
+    <string name="pairing_scan_qr_content_desc">Scan QR code from child device</string>
+    <string name="pairing_scan_qr_button">Scan QR Code</string>
+    <string name="pairing_nearby_p2p_content_desc">Start nearby P2P discovery</string>
+    <string name="pairing_nearby_wifi_button">Nearby WiFi Pairing</string>
+    <string name="pairing_continue_content_desc">Return to dashboard</string>
 </resources>

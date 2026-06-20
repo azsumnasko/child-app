@@ -109,16 +109,23 @@ object NetworkModule {
      * Always pin **at least two independent hashes** (e.g. leaf certificate +
      * intermediate CA) to prevent lock-out when the leaf certificate rotates.
      */
+    @Provides
+    @Singleton
+    fun provideDynamicBaseUrlInterceptor(): DynamicBaseUrlInterceptor = DynamicBaseUrlInterceptor()
+
     @OptIn(ExperimentalSerializationApi::class)
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(
+        dynamicBaseUrlInterceptor: DynamicBaseUrlInterceptor
+    ): OkHttpClient {
         val builder = OkHttpClient.Builder()
             .connectTimeout(CONNECT_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .writeTimeout(WRITE_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .retryOnConnectionFailure(true)
-            .connectionSpecs(listOf(ConnectionSpec.MODERN_TLS))
+            .connectionSpecs(listOf(ConnectionSpec.MODERN_TLS, ConnectionSpec.CLEARTEXT))
+            .addInterceptor(dynamicBaseUrlInterceptor)
 
         val apiHost = try {
             java.net.URI(BuildConfig.API_BASE_URL).host ?: PINNED_DOMAIN

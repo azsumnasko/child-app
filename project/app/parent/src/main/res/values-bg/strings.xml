@@ -118,4 +118,15 @@
     <string name="pairing_invalid_session_id">Моля, въведете ID на сесия за свързване.</string>
     <string name="pairing_device_description">Свързване с детско устройство</string>
     <string name="pair_button_label">Свързване</string>
+    <string name="pairing_scan_prompt">Сканирайте QR кода на детското устройство</string>
+    <string name="pairing_navigate_back_content">Навигиране назад</string>
+    <string name="pairing_session_id_field_label">ID на сесия (показано на детското приложение)</string>
+    <string name="pairing_session_id_placeholder">напр. abc123-...</string>
+    <string name="pairing_code_input_content">Поле за въвеждане на код за свързване</string>
+    <string name="pairing_connect_content_desc">Свързване с детско устройство</string>
+    <string name="pairing_scan_qr_content_desc">Сканиране на QR код от детско устройство</string>
+    <string name="pairing_scan_qr_button">Сканирай QR код</string>
+    <string name="pairing_nearby_p2p_content_desc">Започни близко P2P откриване</string>
+    <string name="pairing_nearby_wifi_button">Близко WiFi свързване</string>
+    <string name="pairing_continue_content_desc">Връщане към таблото</string>
 </resources>

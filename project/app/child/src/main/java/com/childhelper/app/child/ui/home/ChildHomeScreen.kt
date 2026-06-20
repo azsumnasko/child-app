@@ -87,7 +87,8 @@ fun ChildHomeScreen(
         when (navigationEvent) {
             is HomeNavigationEvent.NavigateToCall -> {
                 val event = navigationEvent as HomeNavigationEvent.NavigateToCall
-                navController.navigate("call/${event.contactId}?video=${event.hasVideo}")
+                val encodedName = java.net.URLEncoder.encode(event.contactName, "UTF-8")
+                navController.navigate("call/${event.contactId}?video=${event.hasVideo}&name=$encodedName")
                 viewModel.consumeNavigationEvent()
             }
             HomeNavigationEvent.NavigateToSos -> {

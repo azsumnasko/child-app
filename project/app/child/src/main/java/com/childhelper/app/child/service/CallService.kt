@@ -74,10 +74,13 @@ class CallService : Service() {
         super.onCreate()
         Log.i(TAG, "CallService created")
 
-        // Initialize WebRTC
+        if (!::callManager.isInitialized) {
+            Log.w(TAG, "CallManager not yet injected — deferring WebRTC init")
+            return
+        }
+
         callManager.initializeWebRtc()
 
-        // Monitor call state for notifications
         serviceScope.launch {
             callManager.callState.collectLatest { state ->
                 updateCallNotification(state)
@@ -120,6 +123,12 @@ class CallService : Service() {
      * Start an outgoing call.
      */
     private fun startOutgoingCall(contactId: String, contactName: String, hasVideo: Boolean) {
+        if (!::callManager.isInitialized) {
+            Log.e(TAG, "CallManager not injected — cannot start call")
+            stopSelf()
+            return
+        }
+
         // Start as foreground service
         val notification = createCallNotification(
             state = "Calling $contactName...",
@@ -156,6 +165,8 @@ class CallService : Service() {
      * Accept an incoming call.
      */
     private fun acceptIncomingCall(sessionId: String) {
+        if (!::callManager.isInitialized) return
+
         // Update notification to connected state
         val notification = createCallNotification(
             state = "Call connected",
@@ -171,7 +182,7 @@ class CallService : Service() {
      * End the current call.
      */
     private fun endCall() {
-        callManager.endCall()
+        if (::callManager.isInitialized) callManager.endCall()
         releaseWakeLock()
         stopCallService()
     }

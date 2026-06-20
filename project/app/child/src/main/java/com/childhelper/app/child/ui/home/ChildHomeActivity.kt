@@ -183,21 +183,27 @@ fun ChildAppNavHost(navController: NavHostController) {
 
         // Call screen
         composable(
-            route = "call/{contactId}?video={video}",
+            route = "call/{contactId}?video={video}&name={contactName}",
             arguments = listOf(
                 navArgument("contactId") { type = NavType.StringType },
                 navArgument("video") {
                     type = NavType.BoolType
                     defaultValue = true
+                },
+                navArgument("contactName") {
+                    type = NavType.StringType
+                    defaultValue = ""
                 }
             )
         ) { backStackEntry ->
             val contactId = backStackEntry.arguments?.getString("contactId") ?: ""
             val hasVideo = backStackEntry.arguments?.getBoolean("video") ?: true
+            val contactName = backStackEntry.arguments?.getString("contactName") ?: ""
             CallScreen(
                 navController = navController,
                 contactId = contactId,
-                hasVideo = hasVideo
+                hasVideo = hasVideo,
+                contactName = contactName
             )
         }
 

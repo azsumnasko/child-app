@@ -71,6 +71,7 @@ fun CallScreen(
     navController: NavController,
     contactId: String,
     hasVideo: Boolean = true,
+    contactName: String = "",
     viewModel: CallViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -78,7 +79,7 @@ fun CallScreen(
 
     // Start the call on first composition
     DisposableEffect(contactId) {
-        viewModel.startCall(contactId, hasVideo)
+        viewModel.startCall(contactId, hasVideo, contactName)
         onDispose {
             viewModel.endCall()
         }

@@ -129,10 +129,15 @@ class ChildHomeViewModel @Inject constructor(
     }
 
     fun onContactClick(contact: Contact) {
-        if (contact.isPrimary) {
-            speakText("Calling Mom")
+        val displayName = when (contact.role) {
+            ContactRole.MOTHER -> "Mom"
+            ContactRole.FATHER -> "Dad"
+            ContactRole.GUARDIAN -> contact.name
         }
-        _navigationEvent.value = HomeNavigationEvent.NavigateToCall(contact.id, hasVideo = true)
+        if (contact.isPrimary) {
+            speakText("Calling $displayName")
+        }
+        _navigationEvent.value = HomeNavigationEvent.NavigateToCall(contact.id, hasVideo = true, contactName = displayName)
     }
 
     fun onSosClick() {
@@ -203,7 +208,7 @@ data class ChildHomeUiState(
  * Navigation events from the home screen.
  */
 sealed class HomeNavigationEvent {
-    data class NavigateToCall(val contactId: String, val hasVideo: Boolean) : HomeNavigationEvent()
+    data class NavigateToCall(val contactId: String, val hasVideo: Boolean, val contactName: String) : HomeNavigationEvent()
     data object NavigateToSos : HomeNavigationEvent()
     data object NavigateToBedtime : HomeNavigationEvent()
     data object NavigateToPairing : HomeNavigationEvent()

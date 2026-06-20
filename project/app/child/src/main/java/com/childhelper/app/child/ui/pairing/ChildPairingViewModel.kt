@@ -4,12 +4,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.childhelper.core.common.model.PairingState
 import com.childhelper.core.common.model.PairingStatus
+import com.childhelper.core.common.util.CryptoUtil
 import com.childhelper.core.common.util.SafeResult
+import com.childhelper.core.network.BuildConfig
 import com.childhelper.core.network.repository.PairingRepository
 import com.childhelper.core.p2p.LocalP2pManager
 import com.childhelper.core.p2p.LocalPeerState
+import com.childhelper.core.p2p.P2pMessage
+import com.childhelper.core.p2p.P2pMessageType
 import com.childhelper.core.p2p.QrPairingManager
 import com.childhelper.core.security.KeystoreManager
+import com.childhelper.core.security.PairingCrypto
 import com.childhelper.core.security.SecurePreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -18,6 +23,13 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.put
+import java.security.KeyPair
 import javax.inject.Inject
 
 @HiltViewModel
@@ -26,7 +38,8 @@ class ChildPairingViewModel @Inject constructor(
     private val securePreferences: SecurePreferences,
     private val p2pManager: LocalP2pManager,
     private val qrPairingManager: QrPairingManager,
-    private val keystoreManager: KeystoreManager
+    private val keystoreManager: KeystoreManager,
+    private val pairingCrypto: PairingCrypto
 ) : ViewModel() {
 
     private val _pairingCode = MutableStateFlow("")
@@ -47,9 +60,11 @@ class ChildPairingViewModel @Inject constructor(
     private val _isP2pMode = MutableStateFlow(false)
     val isP2pMode: StateFlow<Boolean> = _isP2pMode.asStateFlow()
 
+    private val json = Json { ignoreUnknownKeys = true }
     private var currentSessionId: String? = null
     private var pollingJob: Job? = null
     private var p2pJob: Job? = null
+    private var childEcdhKeyPair: KeyPair? = null
 
     fun startPairing() {
         _isP2pMode.value = false
@@ -67,6 +82,10 @@ class ChildPairingViewModel @Inject constructor(
                     currentSessionId = result.data.sessionId
                     _sessionId.value = result.data.sessionId
                     _pairingCode.value = result.data.pairingCode
+                    // Generate QR code for server-based pairing
+                    _qrData.value = qrPairingManager.generateServerData(
+                        BuildConfig.API_BASE_URL, result.data.sessionId, result.data.pairingCode
+                    )
                     _pairingState.value = PairingState.WAITING
                     pollingJob = viewModelScope.launch {
                         while (true) {
@@ -99,14 +118,17 @@ class ChildPairingViewModel @Inject constructor(
                         securePreferences.putString("device_id", id)
                     }
 
-                // Generate key pair for P2P identity
+                // Generate identity key pair for P2P
                 val keyPair = keystoreManager.generateKeyPair("child_p2p_key_$deviceId")
                 val publicKey = keyPair.public.encoded?.let {
                     java.util.Base64.getEncoder().encodeToString(it)
                 } ?: ""
 
+                // Generate ECDH key pair for session key exchange
+                childEcdhKeyPair = pairingCrypto.generateEcdhKeyPair()
+
                 // Generate QR data
-                val qrContent = qrPairingManager.generatePairingData(
+                val qrContent = qrPairingManager.generateP2pData(
                     deviceId = deviceId,
                     deviceName = "ChildHelper",
                     publicKey = publicKey
@@ -127,6 +149,7 @@ class ChildPairingViewModel @Inject constructor(
                         when (state) {
                             is LocalPeerState.Connected -> {
                                 _pairingState.value = PairingState.PAIRED
+                                handleP2pKeyExchange()
                             }
                             is LocalPeerState.Error -> {
                                 _errorMessage.value = state.message
@@ -147,6 +170,31 @@ class ChildPairingViewModel @Inject constructor(
                 _pairingState.value = PairingState.ERROR
             }
         }
+    }
+
+    private suspend fun handleP2pKeyExchange() {
+        val ecdhPair = childEcdhKeyPair ?: return
+        try {
+            p2pManager.messageFlow.collect { msg ->
+                if (msg.type == P2pMessageType.KEY_EXCHANGE) {
+                    val obj = json.decodeFromString<JsonObject>(msg.payload)
+                    val parentPublicKeyB64 = obj["publicKey"]?.jsonPrimitive?.content ?: return@collect
+                    val parentPublicKeyBytes = CryptoUtil.base64Decode(parentPublicKeyB64)
+                    val keyFactory = java.security.KeyFactory.getInstance("EC")
+                    val publicKeySpec = java.security.spec.X509EncodedKeySpec(parentPublicKeyBytes)
+                    val parentPublicKey = keyFactory.generatePublic(publicKeySpec)
+                    val sharedSecret = pairingCrypto.deriveSharedSecret(ecdhPair, parentPublicKey)
+                    securePreferences.putString("shared_secret", CryptoUtil.base64Encode(sharedSecret))
+                    securePreferences.putBoolean("is_paired", true)
+
+                    // Send child's ECDH public key back to parent
+                    val childPublicKeyB64 = CryptoUtil.base64Encode(ecdhPair.public.encoded)
+                    val responsePayload = buildJsonObject { put("publicKey", childPublicKeyB64) }
+                    p2pManager.sendMessage(P2pMessage(P2pMessageType.KEY_EXCHANGE, json.encodeToString(responsePayload)))
+                    return@collect
+                }
+            }
+        } catch (_: Exception) { }
     }
 
     override fun onCleared() {

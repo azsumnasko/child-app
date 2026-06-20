@@ -2,7 +2,6 @@ package com.childhelper.core.p2p
 
 import android.content.Context
 import com.childhelper.core.common.notification.NotificationSender
-import com.childhelper.core.security.PairingCrypto
 import com.childhelper.core.network.api.SignalingApi
 import dagger.Module
 import dagger.Provides
@@ -26,9 +25,7 @@ object P2pModule {
 
     @Provides
     @Singleton
-    fun provideQrPairingManager(
-        pairingCrypto: PairingCrypto
-    ): QrPairingManager = QrPairingManager(pairingCrypto)
+    fun provideQrPairingManager(): QrPairingManager = QrPairingManager()
 
     @Provides
     @Singleton

@@ -123,4 +123,21 @@
     <string name="pairing_error_title">Грешка!</string>
     <string name="pairing_try_again">Опитайте отново</string>
     <string name="pairing_button">Свързване</string>
+    <string name="pairing_nearby_p2p_button">Близко P2P свързване</string>
+    <string name="pairing_nearby_p2p_content_desc">Започни близко P2P свързване</string>
+    <string name="pairing_qr_image_desc">QR код за свързване</string>
+    <string name="pairing_scan_instruction">Сканирайте с приложението на родителя</string>
+    <string name="pairing_session_label">Сесия: %s</string>
+    <string name="pairing_code_content_desc">Код за свързване: %s</string>
+    <string name="pairing_session_id_label">ID на сесия: %s</string>
+    <string name="pairing_cancel_content_desc">Отказ на свързване</string>
+    <string name="pairing_done_content_desc">Готово, връщане към начало</string>
+    <string name="pairing_retry_content_desc">Повторен опит за свързване</string>
+    <string name="pairing_error_default">Нещо се обърка. Моля, опитайте отново.</string>
+    <string name="pairing_back_content_desc">Назад</string>
+    <string name="pairing_p2p_title">Близко P2P свързване</string>
+    <string name="pairing_p2p_instruction">Помолете родителя си да сканира този QR код или докоснете \"Наблизо\", за да откриете това устройство.</string>
+    <string name="pairing_qr_error_content">Генерирането на QR код не успя</string>
+    <string name="pairing_qr_error_label">Грешка с QR</string>
+    <string name="pairing_device_label">Устройство: %s</string>
 </resources>

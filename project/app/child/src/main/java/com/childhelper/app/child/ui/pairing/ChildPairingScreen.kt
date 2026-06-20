@@ -64,6 +64,8 @@ fun ChildPairingScreen(
     val qrData by viewModel.qrData.collectAsState()
     val isP2p by viewModel.isP2pMode.collectAsState()
 
+    val backContentDesc = stringResource(R.string.pairing_back_content_desc)
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -81,7 +83,7 @@ fun ChildPairingScreen(
                             navController.popBackStack()
                         },
                         modifier = Modifier.semantics {
-                            contentDescription = "Go back"
+                            contentDescription = backContentDesc
                         }
                     ) {
                         Icon(
@@ -118,21 +120,13 @@ fun ChildPairingScreen(
 
                 PairingState.WAITING -> {
                     if (isP2p) {
-                        P2pWaitingContent(
-                            qrData = qrData,
-                            sessionId = sessionId,
-                            onCancel = {
-                                viewModel.cancelPairing()
-                                navController.popBackStack()
-                            }
-                        )
+                        P2pWaitingContent(qrData = qrData, sessionId = sessionId, onCancel = {
+                            viewModel.cancelPairing(); navController.popBackStack()
+                        })
                     } else {
-                        WaitingContent(
-                            code = code,
-                            sessionId = sessionId,
-                            onCancel = {
-                                viewModel.cancelPairing()
-                                navController.popBackStack()
+                        WaitingContentWithQr(
+                            code = code, sessionId = sessionId, qrData = qrData, onCancel = {
+                                viewModel.cancelPairing(); navController.popBackStack()
                             }
                         )
                     }
@@ -149,7 +143,7 @@ fun ChildPairingScreen(
 
                 PairingState.ERROR -> {
                     ErrorContent(
-                        message = errorMessage ?: "Something went wrong. Please try again.",
+                        message = errorMessage ?: stringResource(R.string.pairing_error_default),
                         onRetry = { viewModel.startPairing() },
                         onCancel = {
                             viewModel.resetState()
@@ -164,6 +158,9 @@ fun ChildPairingScreen(
 
 @Composable
 private fun IdleContent(onStartPairing: () -> Unit, onStartP2pPairing: () -> Unit) {
+    val genDesc = stringResource(R.string.pairing_generate_button)
+    val p2pDesc = stringResource(R.string.pairing_nearby_p2p_content_desc)
+    val p2pLabel = stringResource(R.string.pairing_nearby_p2p_button)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth()
@@ -192,7 +189,7 @@ private fun IdleContent(onStartPairing: () -> Unit, onStartP2pPairing: () -> Uni
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .semantics { contentDescription = "Generate pairing code" },
+                .semantics { contentDescription = genDesc },
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = ChildColors.Primary
@@ -212,14 +209,48 @@ private fun IdleContent(onStartPairing: () -> Unit, onStartP2pPairing: () -> Uni
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .semantics { contentDescription = "Start nearby P2P pairing" },
+                .semantics { contentDescription = p2pDesc },
             shape = RoundedCornerShape(14.dp)
         ) {
             Text(
-                text = "Nearby P2P Pairing",
+                text = p2pLabel,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
+        }
+    }
+}
+
+@Composable
+private fun WaitingContentWithQr(
+    code: String, sessionId: String, qrData: String, onCancel: () -> Unit
+) {
+    val qrBitmap = remember(qrData) { QrCodeGenerator.generate(qrData, 400) }
+    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+        Text(text = stringResource(R.string.pairing_your_code), style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onBackground)
+        Spacer(modifier = Modifier.height(16.dp))
+        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(containerColor = ChildColors.PrimaryLight.copy(alpha = 0.2f))) {
+            Text(text = code, modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 32.dp),
+                fontSize = 48.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center,
+                color = ChildColors.PrimaryDark, letterSpacing = 12.sp)
+        }
+        Spacer(modifier = Modifier.height(20.dp))
+        if (qrBitmap != null) {
+            Image(bitmap = qrBitmap.asImageBitmap(), contentDescription = stringResource(R.string.pairing_qr_image_desc),
+                modifier = Modifier.size(220.dp).clip(RoundedCornerShape(16.dp))
+                    .border(2.dp, ChildColors.Primary, RoundedCornerShape(16.dp)))
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(stringResource(R.string.pairing_scan_instruction), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(text = stringResource(R.string.pairing_session_label, sessionId), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(modifier = Modifier.height(24.dp))
+        Button(onClick = onCancel, modifier = Modifier.fillMaxWidth().height(56.dp),
+            shape = RoundedCornerShape(14.dp), colors = ButtonDefaults.buttonColors(
+                containerColor = MaterialTheme.colorScheme.errorContainer, contentColor = MaterialTheme.colorScheme.onErrorContainer)) {
+            Text(stringResource(R.string.pairing_cancel), fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -332,6 +363,7 @@ private fun WaitingContent(
 
 @Composable
 private fun PairedContent(onDone: () -> Unit) {
+    val doneDesc = stringResource(R.string.pairing_done_content_desc)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth()
@@ -360,7 +392,7 @@ private fun PairedContent(onDone: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .semantics { contentDescription = "Done, return to home" },
+                .semantics { contentDescription = doneDesc },
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = ChildColors.Secondary
@@ -381,6 +413,7 @@ private fun ErrorContent(
     onRetry: () -> Unit,
     onCancel: () -> Unit
 ) {
+    val retryDesc = stringResource(R.string.pairing_retry_content_desc)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth()
@@ -409,7 +442,7 @@ private fun ErrorContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .semantics { contentDescription = "Retry pairing" },
+                .semantics { contentDescription = retryDesc },
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = ChildColors.Primary
@@ -450,6 +483,7 @@ private fun P2pWaitingContent(
     sessionId: String,
     onCancel: () -> Unit
 ) {
+    val qrErrorDesc = stringResource(R.string.pairing_qr_error_content)
     val qrBitmap = remember(qrData) {
         QrCodeGenerator.generate(qrData, 512)
     }
@@ -459,7 +493,7 @@ private fun P2pWaitingContent(
         modifier = Modifier.fillMaxWidth()
     ) {
         Text(
-            text = "Nearby P2P Pairing",
+            text = stringResource(R.string.pairing_p2p_title),
             style = MaterialTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onBackground
@@ -468,7 +502,7 @@ private fun P2pWaitingContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Ask your parent to scan this QR code, or tap \"Nearby\" to discover this device.",
+            text = stringResource(R.string.pairing_p2p_instruction),
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -479,7 +513,7 @@ private fun P2pWaitingContent(
         if (qrBitmap != null) {
             Image(
                 bitmap = qrBitmap.asImageBitmap(),
-                contentDescription = "Pairing QR code",
+                contentDescription = stringResource(R.string.pairing_qr_image_desc),
                 modifier = Modifier
                     .size(280.dp)
                     .clip(RoundedCornerShape(16.dp))
@@ -489,12 +523,12 @@ private fun P2pWaitingContent(
             Card(
                 modifier = Modifier
                     .size(280.dp)
-                    .semantics { contentDescription = "QR code generation failed" },
+                    .semantics { contentDescription = qrErrorDesc },
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.LightGray)
             ) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("QR Error", color = Color.Gray)
+                    Text(stringResource(R.string.pairing_qr_error_label), color = Color.Gray)
                 }
             }
         }
@@ -502,7 +536,7 @@ private fun P2pWaitingContent(
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "Device: $sessionId",
+            text = stringResource(R.string.pairing_device_label, sessionId),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

@@ -40,13 +40,27 @@ This is a multi-module Android project (Kotlin + Jetpack Compose + Hilt) impleme
 
 ### Build Commands
 ```bash
-# Windows
+# IMPORTANT: Always use --no-parallel for clean builds.
+# Hilt/KSP annotation processors can deadlock with parallel builds (org.gradle.parallel=true)
+# when multiple modules compete for KSP resources simultaneously.
+# Incremental builds without clean work fine with parallel; clean builds require --no-parallel.
+
+# Windows — incremental build (parallel OK)
 gradlew.bat :app:child:assembleDebug
 gradlew.bat :app:parent:assembleDebug
 
-# All at once
+# All at once — incremental (parallel OK)
 gradlew.bat assembleDebug
+
+# Clean build REQUIRES --no-parallel to avoid KSP deadlock
+gradlew.bat clean
+gradlew.bat :app:child:assembleDebug :app:parent:assembleDebug --no-parallel
 ```
+
+### Build Troubleshooting
+- **"Processing did not complete" / KSP hang**: Use `--no-parallel`. Kill stale daemons with `gradlew.bat --stop`.
+- **Build appears stuck**: Check if Gradle daemon memory is exhausted. Default is 8GB in `gradle.properties`.
+- **Clean build slower than expected**: First clean build compiles all modules from scratch (~30s). Subsequent incremental builds are fast (~10s).
 
 ### Build Prerequisites
 - Android SDK (API 36), JDK 17+

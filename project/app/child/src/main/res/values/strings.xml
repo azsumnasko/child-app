@@ -124,4 +124,21 @@
     <string name="pairing_error_title">Oops!</string>
     <string name="pairing_try_again">Try Again</string>
     <string name="pairing_button">Pair</string>
+    <string name="pairing_nearby_p2p_button">Nearby P2P Pairing</string>
+    <string name="pairing_nearby_p2p_content_desc">Start nearby P2P pairing</string>
+    <string name="pairing_qr_image_desc">Pairing QR code</string>
+    <string name="pairing_scan_instruction">Scan with parent app</string>
+    <string name="pairing_session_label">Session: %s</string>
+    <string name="pairing_code_content_desc">Pairing code: %s</string>
+    <string name="pairing_session_id_label">Session ID: %s</string>
+    <string name="pairing_cancel_content_desc">Cancel pairing</string>
+    <string name="pairing_done_content_desc">Done, return to home</string>
+    <string name="pairing_retry_content_desc">Retry pairing</string>
+    <string name="pairing_error_default">Something went wrong. Please try again.</string>
+    <string name="pairing_back_content_desc">Go back</string>
+    <string name="pairing_p2p_title">Nearby P2P Pairing</string>
+    <string name="pairing_p2p_instruction">Ask your parent to scan this QR code, or tap \"Nearby\" to discover this device.</string>
+    <string name="pairing_qr_error_content">QR code generation failed</string>
+    <string name="pairing_qr_error_label">QR Error</string>
+    <string name="pairing_device_label">Device: %s</string>
 </resources>

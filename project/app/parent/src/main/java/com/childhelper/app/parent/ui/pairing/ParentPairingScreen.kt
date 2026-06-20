@@ -58,9 +58,12 @@ fun ParentPairingScreen(
     val enteredCode by viewModel.code.collectAsState()
     val state by viewModel.pairingState.collectAsState()
     val errorMessage by viewModel.errorMessage.collectAsState()
+    val sessionId by viewModel.sessionId.collectAsState()
     val isP2p by viewModel.isP2pMode.collectAsState()
     val discovered by viewModel.discoveredDevices.collectAsState()
     val context = LocalContext.current
+
+    val navigateBackDesc = stringResource(R.string.pairing_navigate_back_content)
 
     // QR scanner launcher
     val qrScannerLauncher = rememberLauncherForActivityResult(
@@ -73,7 +76,7 @@ fun ParentPairingScreen(
 
     val scanOptions = ScanOptions().apply {
         setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-        setPrompt("Scan the child device QR code")
+        setPrompt(stringResource(R.string.pairing_scan_prompt))
         setBeepEnabled(true)
         setOrientationLocked(true)
     }
@@ -95,7 +98,7 @@ fun ParentPairingScreen(
                             onNavigateBack()
                         },
                         modifier = Modifier.semantics {
-                            contentDescription = "Navigate back"
+                            contentDescription = navigateBackDesc
                         }
                     ) {
                         Icon(
@@ -125,8 +128,10 @@ fun ParentPairingScreen(
                 PairingState.ERROR -> {
                     IdleContent(
                         enteredCode = enteredCode,
+                        sessionId = sessionId,
                         errorMessage = errorMessage,
                         onCodeChange = { viewModel.onCodeChange(it) },
+                        onSessionIdChange = { viewModel.setSessionId(it) },
                         onSubmit = { viewModel.submitCode() },
                         onScanQr = { qrScannerLauncher.launch(scanOptions) },
                         onNearbyPairing = { viewModel.startP2pDiscovery() },
@@ -158,13 +163,19 @@ fun ParentPairingScreen(
 @Composable
 private fun IdleContent(
     enteredCode: String,
+    sessionId: String,
     errorMessage: String?,
     onCodeChange: (String) -> Unit,
+    onSessionIdChange: (String) -> Unit,
     onSubmit: () -> Unit,
     onScanQr: () -> Unit,
     onNearbyPairing: () -> Unit,
     state: PairingState
 ) {
+    val codeInputDesc = stringResource(R.string.pairing_code_input_content)
+    val connectDesc = stringResource(R.string.pairing_connect_content_desc)
+    val scanQrDesc = stringResource(R.string.pairing_scan_qr_content_desc)
+    val p2pDiscoveryDesc = stringResource(R.string.pairing_nearby_p2p_content_desc)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth()
@@ -188,6 +199,19 @@ private fun IdleContent(
         Spacer(modifier = Modifier.height(32.dp))
 
         OutlinedTextField(
+            value = sessionId,
+            onValueChange = { onSessionIdChange(it.take(36)) },
+            label = { Text(stringResource(R.string.pairing_session_id_field_label)) },
+            placeholder = { Text(stringResource(R.string.pairing_session_id_placeholder)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.None, imeAction = ImeAction.Next)
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        OutlinedTextField(
             value = enteredCode,
             onValueChange = { newValue ->
                 val cleaned = newValue.replace(" ", "").uppercase().take(6)
@@ -198,7 +222,7 @@ private fun IdleContent(
             singleLine = true,
             modifier = Modifier
                 .fillMaxWidth()
-                .semantics { contentDescription = "Pairing code input field" },
+                .semantics { contentDescription = codeInputDesc },
             shape = RoundedCornerShape(12.dp),
             keyboardOptions = KeyboardOptions(
                 capitalization = KeyboardCapitalization.Characters,
@@ -223,7 +247,7 @@ private fun IdleContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .semantics { contentDescription = "Connect to child device" },
+                .semantics { contentDescription = connectDesc },
             shape = RoundedCornerShape(14.dp),
             enabled = enteredCode.length == 6
         ) {
@@ -241,10 +265,10 @@ private fun IdleContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .semantics { contentDescription = "Scan QR code from child device" },
+                .semantics { contentDescription = scanQrDesc },
             shape = RoundedCornerShape(14.dp)
         ) {
-            Text("Scan QR Code", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.pairing_scan_qr_button), fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
 
         Spacer(modifier = Modifier.height(12.dp))
@@ -254,10 +278,10 @@ private fun IdleContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .semantics { contentDescription = "Start nearby P2P discovery" },
+                .semantics { contentDescription = p2pDiscoveryDesc },
             shape = RoundedCornerShape(14.dp)
         ) {
-            Text("Nearby WiFi Pairing", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.pairing_nearby_wifi_button), fontSize = 18.sp, fontWeight = FontWeight.Bold)
         }
     }
 }
@@ -306,6 +330,7 @@ private fun WaitingContent() {
 
 @Composable
 private fun PairedContent(onDone: () -> Unit) {
+    val continueDesc = stringResource(R.string.pairing_continue_content_desc)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier.fillMaxWidth()
@@ -334,7 +359,7 @@ private fun PairedContent(onDone: () -> Unit) {
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .semantics { contentDescription = "Return to dashboard" },
+                .semantics { contentDescription = continueDesc },
             shape = RoundedCornerShape(14.dp)
         ) {
             Text(
