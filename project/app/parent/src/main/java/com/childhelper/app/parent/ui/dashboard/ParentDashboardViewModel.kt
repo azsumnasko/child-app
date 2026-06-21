@@ -118,11 +118,24 @@ class ParentDashboardViewModel @Inject constructor(
         viewModelScope.launch {
             _isRefreshing.value = true
             try {
-                // Enforce retention policy on refresh
-                alertRepository.scheduleRetentionEnforcement()
+                // Re-read pairing state (in case pairing just completed)
+                val childId = securePreferences.getString(KEY_PAIRED_CHILD_DEVICE_ID)
+                val isPaired = securePreferences.getBoolean("is_paired", false)
+                if (childId != null && isPaired) {
+                    _deviceStatus.value = _deviceStatus.value.copy(deviceId = childId)
+                    val name = securePreferences.getString(KEY_CHILD_NAME) ?: "Child Device"
+                    _childName.value = name
+                } else {
+                    _childName.value = "No device paired"
+                }
 
-                // Update last seen
-                _deviceStatus.update { it.copy(lastSeen = System.currentTimeMillis()) }
+                // Update last seen time
+                _deviceStatus.value = _deviceStatus.value.copy(
+                    lastSeen = System.currentTimeMillis(),
+                    isOnline = true
+                )
+
+                alertRepository.scheduleRetentionEnforcement()
                 _errorMessage.value = null
             } catch (e: Exception) {
                 _errorMessage.value = "Failed to refresh: ${e.localizedMessage}"

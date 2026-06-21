@@ -69,10 +69,9 @@ class AudioPipeline(
     fun startRecording() {
         if (isRunning) return
         if (!hasRecordPermission()) {
+            android.util.Log.w("AudioPipeline", "Audio permission denied — cry detection disabled")
             return
         }
-
-        isRunning = true
 
         try {
             val bufferSize = maxOf(MIN_BUFFER_SIZE * 2, BYTES_PER_WINDOW * 2)
@@ -84,6 +83,8 @@ class AudioPipeline(
                 AUDIO_FORMAT,
                 bufferSize
             )
+
+            isRunning = true
 
             audioRecord?.startRecording()
             scope.launch { _isRecording.emit(true) }

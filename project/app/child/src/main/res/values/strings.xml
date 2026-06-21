@@ -8,6 +8,7 @@
     <string name="home_greeting_title">Who would you like to call?</string>
     <string name="home_greeting_subtitle">Tap a picture to call</string>
     <string name="home_welcome_message">Tap Mom or Dad to call. Hold the SOS button for help.</string>
+    <string name="home_pair_first">Pair device first</string>
     <string name="status_online">Device is online.</string>
     <string name="status_offline">Device is offline.</string>
     <string name="status_battery_format">Battery at %d percent.</string>

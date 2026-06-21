@@ -64,6 +64,7 @@ class FcmService : FirebaseMessagingService() {
     lateinit var securePreferences: SecurePreferences
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var pendingToken: String? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -72,17 +73,27 @@ class FcmService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        serviceScope.launch {
-            try {
-                val deviceId = securePreferences.getString("device_id") ?: return@launch
-                val payload = buildJsonObject {
-                    put("deviceId", deviceId)
-                    put("fcmToken", token)
-                }
-                pairingApi.registerFcmToken(payload)
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to register FCM token with backend", e)
+        pendingToken = token
+        tryRegisterToken()
+    }
+
+    private fun tryRegisterToken() {
+        val token = pendingToken ?: return
+        try {
+            val deviceId = kotlinx.coroutines.runBlocking {
+                securePreferences.getString("device_id")
+            } ?: return
+            val payload = buildJsonObject {
+                put("deviceId", deviceId)
+                put("fcmToken", token)
             }
+            kotlinx.coroutines.runBlocking {
+                pairingApi.registerFcmToken(payload)
+            }
+            pendingToken = null
+            Log.i(TAG, "FCM token registered for device $deviceId")
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to register FCM token", e)
         }
     }
 
@@ -107,16 +118,17 @@ class FcmService : FirebaseMessagingService() {
                     signalingClient.pollNow()
                 }
             }
-            return
-        }
-
-        // Parse and emit alert notifications
-        val alert = parseAlert(data)
-        if (alert != null) {
-            serviceScope.launch {
-                _alertFlow.emit(alert)
+        } else {
+            // Parse and emit alert notifications
+            val alert = parseAlert(data)
+            if (alert != null) {
+                serviceScope.launch {
+                    _alertFlow.emit(alert)
+                }
             }
         }
+
+        tryRegisterToken()
     }
 
     /**

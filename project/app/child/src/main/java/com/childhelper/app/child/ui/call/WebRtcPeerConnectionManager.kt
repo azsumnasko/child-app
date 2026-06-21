@@ -181,7 +181,7 @@ class WebRtcPeerConnectionManager(
 
         val observer = CompletableSdpObserver()
         pc.createOffer(observer, constraints)
-        val offer = observer.get() ?: throw IllegalStateException("Failed to create offer")
+        val offer = observer.get()
 
         val localObserver = CompletableSdpObserver()
         pc.setLocalDescription(localObserver, offer)
@@ -205,7 +205,7 @@ class WebRtcPeerConnectionManager(
 
         val observer = CompletableSdpObserver()
         pc.createAnswer(observer, constraints)
-        val answer = observer.get() ?: throw IllegalStateException("Failed to create answer")
+        val answer = observer.get()
 
         val localObserver = CompletableSdpObserver()
         pc.setLocalDescription(localObserver, answer)
@@ -309,19 +309,24 @@ class WebRtcPeerConnectionManager(
             synchronized(lock) { lock.notifyAll() }
         }
 
-        fun get(): SessionDescription? {
+        fun get(): SessionDescription {
             synchronized(lock) {
                 if (sessionDescription == null && error == null) {
                     lock.wait(10000)
                 }
             }
             return sessionDescription
+                ?: error?.let { throw IllegalStateException("SDP failure: $it") }
+                ?: throw IllegalStateException("SDP creation timed out after 10s")
         }
 
         fun await() {
             synchronized(lock) {
-                lock.wait(10000)
+                if (sessionDescription == null && error == null) {
+                    lock.wait(10000)
+                }
             }
+            error?.let { throw IllegalStateException("SDP set failed: $it") }
         }
     }
 

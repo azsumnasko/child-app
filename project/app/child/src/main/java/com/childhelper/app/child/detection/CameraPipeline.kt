@@ -157,7 +157,14 @@ class CameraPipeline(
             }
         }
 
-        context.registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        try {
+            context.registerReceiver(receiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+        } catch (e: Exception) {
+            android.util.Log.w("CameraPipeline", "Cannot register battery receiver, assuming normal power", e)
+            trySend(PowerMode.NORMAL)
+            close(e)
+            return@callbackFlow
+        }
 
         // Emit initial state
         val initialIntent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
@@ -211,7 +218,10 @@ class CameraPipeline(
      */
     fun startAnalysis(lifecycleOwner: LifecycleOwner) {
         if (isRunning) return
-        if (!hasCameraPermission()) return
+        if (!hasCameraPermission()) {
+            android.util.Log.w("CameraPipeline", "Camera permission denied — motion detection disabled")
+            return
+        }
 
         isRunning = true
         currentLifecycleOwner = lifecycleOwner

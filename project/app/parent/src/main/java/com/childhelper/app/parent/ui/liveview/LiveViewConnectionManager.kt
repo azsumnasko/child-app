@@ -80,42 +80,45 @@ class LiveViewConnectionManager @Inject constructor(
     }
 
     fun initializeWebRtc() {
-        if (peerConnectionFactory != null) return
+        synchronized(lock) {
+            if (peerConnectionFactory != null) return
 
-        try {
-            val initOptions = PeerConnectionFactory.InitializationOptions.builder(context)
-                .setEnableInternalTracer(false)
-                .createInitializationOptions()
-            PeerConnectionFactory.initialize(initOptions)
+            try {
+                val initOptions = PeerConnectionFactory.InitializationOptions.builder(context)
+                    .setEnableInternalTracer(false)
+                    .createInitializationOptions()
+                PeerConnectionFactory.initialize(initOptions)
 
-            eglBase = EglBase.create()
+                eglBase = EglBase.create()
 
-            peerConnectionFactory = PeerConnectionFactory.builder()
-                .setVideoEncoderFactory(
-                    org.webrtc.DefaultVideoEncoderFactory(
-                        eglBase!!.eglBaseContext,
-                        true,
-                        true
+                peerConnectionFactory = PeerConnectionFactory.builder()
+                    .setVideoEncoderFactory(
+                        org.webrtc.DefaultVideoEncoderFactory(
+                            eglBase?.eglBaseContext,
+                            true,
+                            true
+                        )
                     )
-                )
-                .setVideoDecoderFactory(
-                    org.webrtc.DefaultVideoDecoderFactory(eglBase!!.eglBaseContext)
-                )
-                .setOptions(PeerConnectionFactory.Options().apply {
-                    disableEncryption = false
-                    disableNetworkMonitor = false
-                })
-                .createPeerConnectionFactory()
-        } catch (e: Exception) {
-            eglBase?.release()
-            eglBase = null
-            peerConnectionFactory = null
-            throw e
+                    .setVideoDecoderFactory(
+                        org.webrtc.DefaultVideoDecoderFactory(eglBase?.eglBaseContext)
+                    )
+                    .setOptions(PeerConnectionFactory.Options().apply {
+                        disableEncryption = false
+                        disableNetworkMonitor = false
+                    })
+                    .createPeerConnectionFactory()
+            } catch (e: Exception) {
+                eglBase?.release()
+                eglBase = null
+                peerConnectionFactory = null
+                throw e
+            }
         }
     }
 
     suspend fun connect(childDeviceId: String): Result<Unit> = withContext(Dispatchers.IO) {
         try {
+            disconnect()
             withTimeout(30_000) {
                 _connectionState.value = LiveConnectionState.CONNECTING
                 initializeWebRtc()
@@ -300,7 +303,7 @@ class LiveViewConnectionManager @Inject constructor(
 
         val observer = CompletableSdpObserver()
         pc.createOffer(observer, constraints)
-        val offer = observer.get() ?: throw IllegalStateException("Failed to create offer")
+        val offer = observer.get()
 
         val localObserver = CompletableSdpObserver()
         pc.setLocalDescription(localObserver, offer)
@@ -377,7 +380,7 @@ class LiveViewConnectionManager @Inject constructor(
 
         val observer = CompletableSdpObserver()
         pc.createAnswer(observer, constraints)
-        val answer = observer.get() ?: throw IllegalStateException("Failed to create answer")
+        val answer = observer.get()
 
         val localObserver = CompletableSdpObserver()
         pc.setLocalDescription(localObserver, answer)
@@ -410,19 +413,24 @@ class LiveViewConnectionManager @Inject constructor(
             synchronized(lock) { lock.notifyAll() }
         }
 
-        fun get(): SessionDescription? {
+        fun get(): SessionDescription {
             synchronized(lock) {
                 if (sessionDescription == null && error == null) {
                     lock.wait(10000)
                 }
             }
             return sessionDescription
+                ?: error?.let { throw IllegalStateException("SDP failure: $it") }
+                ?: throw IllegalStateException("SDP creation timed out after 10s")
         }
 
         fun await() {
             synchronized(lock) {
-                lock.wait(10000)
+                if (sessionDescription == null && error == null) {
+                    lock.wait(10000)
+                }
             }
+            error?.let { throw IllegalStateException("SDP set failed: $it") }
         }
     }
 }

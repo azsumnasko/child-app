@@ -71,7 +71,7 @@
         <!-- Notification channel configuration for FCM -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
-            android:value="parent_alerts_channel" />
+            android:value="child_alerts" />
 
     </application>
 

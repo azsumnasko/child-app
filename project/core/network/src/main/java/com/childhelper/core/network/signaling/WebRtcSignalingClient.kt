@@ -17,6 +17,8 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.buildJsonObject
+import kotlinx.serialization.json.put
 import org.webrtc.IceCandidate
 import org.webrtc.SessionDescription
 import retrofit2.HttpException
@@ -183,31 +185,15 @@ class WebRtcSignalingClient @Inject constructor(
         reason: HangUpReason = HangUpReason.USER_INITIATED
     ): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
-            // HangUp is sent as a signaling message via the API.
-            // The server routes it to the peer device.
-            val hangUp = HangUpMessage(
-                messageId = generateMessageId(),
-                fromDeviceId = deviceIdProvider(),
-                toDeviceId = toDeviceId,
-                timestamp = System.currentTimeMillis(),
-                sessionId = sessionId,
-                reason = reason
-            )
-            // Note: In a full implementation, there would be a dedicated endpoint.
-            // Here we rely on the polling mechanism — the hangup is stored server-side
-            // and delivered when the peer polls. For immediate delivery, a push
-            // notification can trigger an early poll.
-            signalingApi.sendOffer(
-                SdpMessage(
-                    messageId = hangUp.messageId,
-                    fromDeviceId = hangUp.fromDeviceId,
-                    toDeviceId = hangUp.toDeviceId,
-                    timestamp = hangUp.timestamp,
-                    sessionId = hangUp.sessionId,
-                    type = SdpType.OFFER,
-                    sdp = """{"type":"hangup","reason":"${reason.name}"}"""
-                )
-            )
+            val hangUpPayload = buildJsonObject {
+                put("type", "hangup")
+                put("sessionId", sessionId)
+                put("fromDeviceId", deviceIdProvider())
+                put("reason", reason.name)
+                put("timestamp", System.currentTimeMillis())
+            }
+            signalingApi.sendNotification(toDeviceId, hangUpPayload)
+            Unit
         }
     }
 

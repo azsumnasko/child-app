@@ -99,6 +99,11 @@ fun ParentDashboardScreen(
         }
     }
 
+    // Refresh on first composition and each return to this screen
+    LaunchedEffect(Unit) {
+        viewModel.refresh()
+    }
+
     // Show error snackbar
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { message ->

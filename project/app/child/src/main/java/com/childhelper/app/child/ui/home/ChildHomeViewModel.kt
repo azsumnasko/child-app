@@ -111,22 +111,25 @@ class ChildHomeViewModel @Inject constructor(
         viewModelScope.launch {
             val parentDeviceId = securePreferences.getString("paired_parent_device_id")
             val isPaired = securePreferences.getBoolean("is_paired", false)
-            val deviceIdBase = if (isPaired && parentDeviceId != null) parentDeviceId else "1"
-            val defaultContacts = listOf(
-                Contact(
-                    id = deviceIdBase,
-                    name = "Mom",
-                    role = ContactRole.MOTHER,
-                    isPrimary = true
-                ),
-                Contact(
-                    id = deviceIdBase,
-                    name = "Dad",
-                    role = ContactRole.FATHER,
-                    isPrimary = false
+            if (isPaired && parentDeviceId != null) {
+                val defaultContacts = listOf(
+                    Contact(
+                        id = parentDeviceId,
+                        name = "Mom",
+                        role = ContactRole.MOTHER,
+                        isPrimary = true
+                    ),
+                    Contact(
+                        id = parentDeviceId,
+                        name = "Dad",
+                        role = ContactRole.FATHER,
+                        isPrimary = false
+                    )
                 )
-            )
-            _uiState.update { it.copy(contacts = defaultContacts) }
+                _uiState.update { it.copy(contacts = defaultContacts) }
+            } else {
+                _uiState.update { it.copy(contacts = emptyList()) }
+            }
         }
     }
 

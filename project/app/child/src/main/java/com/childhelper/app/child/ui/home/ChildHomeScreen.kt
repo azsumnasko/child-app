@@ -197,10 +197,20 @@ fun ChildHomeScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Contact buttons grid
-            ContactsGrid(
-                contacts = uiState.contacts,
-                onContactClick = { contact -> viewModel.onContactClick(contact) }
-            )
+            if (uiState.contacts.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.home_pair_first),
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            } else {
+                ContactsGrid(
+                    contacts = uiState.contacts,
+                    onContactClick = { contact -> viewModel.onContactClick(contact) }
+                )
+            }
 
             Spacer(modifier = Modifier.height(24.dp))
 

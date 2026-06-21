@@ -182,7 +182,10 @@ class CallManager(
                 val pc = createPeerConnectionWithListener(iceServers)
 
                 val factory = peerConnectionManager.getPeerConnectionFactory()
-                    ?: throw IllegalStateException("PeerConnectionFactory not initialized")
+                if (factory == null) {
+                    _callState.value = CallState.Error("Camera initialization failed. Please restart the app.")
+                    return@launch
+                }
                 val eglBase = peerConnectionManager.getEglBase()
 
                 if (!hasVideo) {
@@ -292,7 +295,10 @@ class CallManager(
                 setRemoteDescription(offer)
 
                 val factory = peerConnectionManager.getPeerConnectionFactory()
-                    ?: throw IllegalStateException("PeerConnectionFactory not initialized")
+                if (factory == null) {
+                    _callState.value = CallState.Error("Camera initialization failed. Please restart the app.")
+                    return@launch
+                }
                 val eglBase = peerConnectionManager.getEglBase()
                 cameraCaptureManager.startCapture(factory, eglBase, peerConnectionManager.getPeerConnection())
                 audioDeviceManager.startAudioCapture(factory, peerConnectionManager.getPeerConnection())
@@ -310,10 +316,11 @@ class CallManager(
      */
     fun endCall() {
         if (_callState.value is CallState.Idle || _callState.value is CallState.Ended) return
-        val sessionId = _currentSession.value?.sessionId
+        val session = _currentSession.value
+        val sessionId = session?.sessionId
 
-        _currentSession.value?.let { session ->
-            _currentSession.value = session.copy(
+        session?.let { s ->
+            _currentSession.value = s.copy(
                 status = CallStatus.ENDED,
                 endTime = System.currentTimeMillis()
             )
@@ -324,17 +331,14 @@ class CallManager(
         cleanup()
 
         scope.launch {
-            // Notify signaling server about call end
             try {
-                sessionId?.let { sid ->
-                    val session = _currentSession.value ?: return@launch
-                    val childDeviceId = getChildDeviceId()
-                    val toDeviceId = if (session.callerId == childDeviceId) session.calleeId else session.callerId
-                    signalingClient.sendHangUp(
-                        sessionId = sid,
-                        toDeviceId = toDeviceId
-                    ).getOrThrow()
-                }
+                val sid = sessionId ?: return@launch
+                val childDeviceId = getChildDeviceId()
+                val toDeviceId = if (session.callerId == childDeviceId) session.calleeId else session.callerId
+                signalingClient.sendHangUp(
+                    sessionId = sid,
+                    toDeviceId = toDeviceId
+                ).getOrThrow()
             } catch (e: Exception) {
                 // Best effort
             }
@@ -464,7 +468,11 @@ class CallManager(
     }
 
     private suspend fun getChildDeviceId(): String {
-        return securePreferences.getString("device_id", "") ?: ""
+        val id = securePreferences.getString("device_id", "") ?: ""
+        if (id.isBlank()) {
+            android.util.Log.w("CallManager", "Device ID not set — calls will fail until device is paired")
+        }
+        return id
     }
 
     /**

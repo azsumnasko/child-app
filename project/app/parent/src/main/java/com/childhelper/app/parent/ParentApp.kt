@@ -137,6 +137,7 @@ class ParentApp : Application() {
 
     private fun startNotificationPolling() {
         appScope.launch {
+            var consecutiveFailures = 0
             while (true) {
                 try {
                     val deviceId = securePreferences.getString("device_id")
@@ -175,10 +176,14 @@ class ParentApp : Application() {
                             Log.e(TAG, "Failed to persist polled alert", e)
                         }
                     }
+                    consecutiveFailures = 0
+                    delay(5000)
                 } catch (e: Exception) {
-                    Log.w(TAG, "Notification polling failed", e)
+                    consecutiveFailures++
+                    Log.w(TAG, "Notification polling failed (attempt $consecutiveFailures)", e)
+                    val backoff = minOf(5000L * (1L shl (consecutiveFailures - 1).coerceAtMost(4)), 30000L)
+                    delay(backoff)
                 }
-                delay(5000)
             }
         }
     }

@@ -181,8 +181,16 @@ object NetworkModule {
         json: Json
     ): Retrofit {
         val contentType = "application/json".toMediaType()
+        val baseUrl = BuildConfig.API_BASE_URL
+            .trim()
+            .ifBlank { "http://localhost:8080/" }
+            .let { if (!it.startsWith("http")) "http://$it" else it }
+            .let { if (!it.endsWith("/")) "$it/" else it }
+
+        android.util.Log.i("NetworkModule", "API base URL: $baseUrl")
+
         return Retrofit.Builder()
-            .baseUrl(BuildConfig.API_BASE_URL)
+            .baseUrl(baseUrl)
             .client(okHttpClient)
             .addConverterFactory(json.asConverterFactory(contentType))
             .build()
@@ -221,18 +229,22 @@ object NetworkModule {
     fun provideDeviceIdProvider(
         securePreferences: com.childhelper.core.security.SecurePreferences
     ): DeviceIdProvider {
-        return {
-            if (cachedDeviceId != null) cachedDeviceId!!
-            else kotlinx.coroutines.runBlocking {
-                val id = securePreferences.getString("device_id", "") ?: ""
-                cachedDeviceId = id
-                id
-            }
+        val initialId = try {
+            kotlinx.coroutines.runBlocking { securePreferences.getString("device_id", "") } ?: ""
+        } catch (_: Exception) {
+            ""
         }
+        var cachedId = initialId
+        val provider: () -> String = {
+            if (cachedId.isBlank()) {
+                try {
+                    cachedId = kotlinx.coroutines.runBlocking { securePreferences.getString("device_id", "") } ?: ""
+                } catch (_: Exception) { "" }
+            }
+            cachedId
+        }
+        return provider
     }
-
-    @Volatile
-    private var cachedDeviceId: String? = null
 
     // Timeouts
     private const val CONNECT_TIMEOUT_SECONDS = 15L

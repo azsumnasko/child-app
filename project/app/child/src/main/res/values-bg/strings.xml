@@ -8,6 +8,7 @@
     <string name="home_greeting_title">На кого искате да се обадите?</string>
     <string name="home_greeting_subtitle">Докоснете снимка, за да се обадите</string>
     <string name="home_welcome_message">Докоснете Мама или Татко, за да се обадите. Задръжте SOS бутона за помощ.</string>
+    <string name="home_pair_first">Първо свържете устройство</string>
     <string name="status_online">Устройството е онлайн.</string>
     <string name="status_offline">Устройството е офлайн.</string>
     <string name="status_battery_format">Батерия на %d процента.</string>
