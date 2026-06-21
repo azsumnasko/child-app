@@ -8,6 +8,9 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.childhelper.app.parent.db.AlertDao
 import com.childhelper.app.parent.db.AppDatabase
 import com.childhelper.app.parent.repository.AlertHistoryRepository
+import com.childhelper.app.parent.ui.liveview.LiveViewConnectionManager
+import com.childhelper.core.network.api.PairingApi
+import com.childhelper.core.network.signaling.WebRtcSignalingClient
 import com.childhelper.core.security.SecurePreferences
 import dagger.Module
 import dagger.Provides
@@ -127,6 +130,28 @@ object ParentAppModule {
     @AppScope
     fun provideAppScope(): CoroutineScope {
         return CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    }
+
+    /**
+     * Provides the [LiveViewConnectionManager] singleton for parent-side
+     * WebRTC live view connections.
+     */
+    @Provides
+    @Singleton
+    fun provideLiveViewConnectionManager(
+        @ApplicationContext context: Context,
+        signalingClient: WebRtcSignalingClient,
+        pairingApi: PairingApi,
+        securePreferences: SecurePreferences,
+        @AppScope scope: CoroutineScope
+    ): LiveViewConnectionManager {
+        return LiveViewConnectionManager(
+            context = context,
+            signalingClient = signalingClient,
+            pairingApi = pairingApi,
+            securePreferences = securePreferences,
+            scope = scope
+        )
     }
 
 }

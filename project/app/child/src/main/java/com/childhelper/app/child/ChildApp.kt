@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import com.childhelper.core.network.signaling.WebRtcSignalingClient
 import com.childhelper.core.security.LocaleManager
 import com.childhelper.core.security.SecurePreferences
 import dagger.hilt.android.HiltAndroidApp
@@ -18,10 +19,14 @@ class ChildApp : Application() {
     @Inject
     lateinit var securePreferences: SecurePreferences
 
+    @Inject
+    lateinit var signalingClient: WebRtcSignalingClient
+
     override fun onCreate() {
         super.onCreate()
         initLocale()
         createNotificationChannels()
+        startSignalingPolling()
     }
 
     private fun initLocale() {
@@ -67,6 +72,14 @@ class ChildApp : Application() {
             } catch (e: Exception) {
                 Log.w(TAG, "Notification channel creation failed", e)
             }
+        }
+    }
+
+    private fun startSignalingPolling() {
+        try {
+            signalingClient.startPolling()
+        } catch (e: Exception) {
+            Log.w(TAG, "Signaling polling start failed", e)
         }
     }
 

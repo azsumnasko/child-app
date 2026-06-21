@@ -63,31 +63,39 @@ class WebRtcPeerConnectionManager(
     fun initializeFactory(context: android.content.Context): EglBase? {
         if (peerConnectionFactory != null) return eglBase
 
-        val initOptions = PeerConnectionFactory.InitializationOptions.builder(context)
-            .setEnableInternalTracer(false)
-            .createInitializationOptions()
-        PeerConnectionFactory.initialize(initOptions)
+        return try {
+            val initOptions = PeerConnectionFactory.InitializationOptions.builder(context)
+                .setEnableInternalTracer(false)
+                .createInitializationOptions()
+            PeerConnectionFactory.initialize(initOptions)
 
-        eglBase = EglBase.create()
+            eglBase = EglBase.create()
 
-        peerConnectionFactory = PeerConnectionFactory.builder()
-            .setVideoEncoderFactory(
-                org.webrtc.DefaultVideoEncoderFactory(
-                    eglBase?.eglBaseContext,
-                    true,
-                    true
+            peerConnectionFactory = PeerConnectionFactory.builder()
+                .setVideoEncoderFactory(
+                    org.webrtc.DefaultVideoEncoderFactory(
+                        eglBase?.eglBaseContext,
+                        true,
+                        true
+                    )
                 )
-            )
-            .setVideoDecoderFactory(
-                org.webrtc.DefaultVideoDecoderFactory(eglBase?.eglBaseContext)
-            )
-            .setOptions(PeerConnectionFactory.Options().apply {
-                disableEncryption = false
-                disableNetworkMonitor = false
-            })
-            .createPeerConnectionFactory()
+                .setVideoDecoderFactory(
+                    org.webrtc.DefaultVideoDecoderFactory(eglBase?.eglBaseContext)
+                )
+                .setOptions(PeerConnectionFactory.Options().apply {
+                    disableEncryption = false
+                    disableNetworkMonitor = false
+                })
+                .createPeerConnectionFactory()
 
-        return eglBase
+            eglBase
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "WebRTC factory initialization failed", e)
+            eglBase?.release()
+            eglBase = null
+            peerConnectionFactory = null
+            null
+        }
     }
 
     /**
@@ -315,5 +323,9 @@ class WebRtcPeerConnectionManager(
                 lock.wait(10000)
             }
         }
+    }
+
+    companion object {
+        private const val TAG = "WebRtcP2pManager"
     }
 }

@@ -71,6 +71,9 @@ class SettingsViewModel @Inject constructor(
     private val _dataDeleted = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
 
+    private val _languageChanged = MutableStateFlow(false)
+    val languageChanged: StateFlow<Boolean> = _languageChanged.asStateFlow()
+
     init {
         viewModelScope.launch {
             val sensitivityStr = preferences.getString(KEY_SENSITIVITY) ?: DEFAULT_SENSITIVITY
@@ -203,7 +206,12 @@ class SettingsViewModel @Inject constructor(
             }
             LocaleManager.cacheLanguage(languageCode)
             _selectedLanguage.value = languageCode
+            _languageChanged.value = true
         }
+    }
+
+    fun onLanguageChangedHandled() {
+        _languageChanged.value = false
     }
 
     // --- Data Deletion ---

@@ -15,6 +15,7 @@ import com.childhelper.app.child.ui.call.CameraCaptureManager
 import com.childhelper.app.child.ui.call.WebRtcPeerConnectionManager
 import com.childhelper.app.child.ui.sos.SosManager
 import com.childhelper.core.common.notification.NotificationSender
+import com.childhelper.core.network.api.PairingApi
 import com.childhelper.core.network.signaling.WebRtcSignalingClient
 import com.childhelper.core.security.SecurePreferences
 import dagger.Module
@@ -161,7 +162,8 @@ object ChildAppModule {
         @ChildScope scope: CoroutineScope,
         peerConnectionManager: WebRtcPeerConnectionManager,
         cameraCaptureManager: CameraCaptureManager,
-        audioDeviceManager: AudioDeviceManager
+        audioDeviceManager: AudioDeviceManager,
+        pairingApi: PairingApi
     ): CallManager {
         return CallManager(
             context,
@@ -170,7 +172,8 @@ object ChildAppModule {
             scope,
             peerConnectionManager,
             cameraCaptureManager,
-            audioDeviceManager
+            audioDeviceManager,
+            pairingApi
         )
     }
 

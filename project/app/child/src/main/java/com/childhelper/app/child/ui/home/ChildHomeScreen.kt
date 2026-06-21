@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -40,7 +41,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -80,7 +80,6 @@ fun ChildHomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val navigationEvent by viewModel.navigationEvent.collectAsState()
     val batteryWhitelistEvent by viewModel.batteryWhitelistEvent.collectAsState()
-    val lifecycleOwner = LocalLifecycleOwner.current
 
     // Handle navigation events
     LaunchedEffect(navigationEvent) {
@@ -112,6 +111,11 @@ fun ChildHomeScreen(
         viewModel.speakWelcomeMessage()
     }
 
+    // Auto-start monitoring after pairing completes
+    LaunchedEffect(Unit) {
+        viewModel.autoStartIfNeeded(DetectionConfig())
+    }
+
     // Battery whitelist dialog (P0-5: OEM battery optimization)
     val whitelistStatus = (batteryWhitelistEvent as? BatteryWhitelistEvent.ShowDialog)?.status
     if (whitelistStatus != null) {
@@ -134,12 +138,13 @@ fun ChildHomeScreen(
         },
         floatingActionButton = {
             // SOS button as floating action for quick access
+            val sosDesc = stringResource(R.string.sos_button_description_fab)
             SosButton(
                 onSosActivated = { viewModel.onSosClick() },
                 modifier = Modifier
                     .size(100.dp)
                     .semantics {
-                        contentDescription = "SOS Emergency Button. Hold for 2 seconds to activate emergency alert."
+                        contentDescription = sosDesc
                     }
             )
         }
@@ -164,8 +169,7 @@ fun ChildHomeScreen(
                                 sensitivity = SensitivityLevel.NORMAL,
                                 cryEnabled = true,
                                 motionEnabled = true
-                            ),
-                            lifecycleOwner
+                            )
                         )
                     }
                 }
@@ -204,11 +208,11 @@ fun ChildHomeScreen(
             QuickActionsRow(
                 onAudioCallMom = {
                     val mom = uiState.contacts.find { it.role == ContactRole.MOTHER }
-                    mom?.let { viewModel.onContactClick(it.copy(isPrimary = true)) }
+                    mom?.let { viewModel.onContactClick(it.copy(isPrimary = true), hasVideo = false) }
                 },
                 onAudioCallDad = {
                     val dad = uiState.contacts.find { it.role == ContactRole.FATHER }
-                    dad?.let { viewModel.onContactClick(it) }
+                    dad?.let { viewModel.onContactClick(it, hasVideo = false) }
                 },
                 onPairWithParent = { viewModel.onPairingClick() }
             )
@@ -266,12 +270,13 @@ private fun HomeTopBar(
         }
 
         // Bedtime mode button
+        val bedtimeDesc = stringResource(R.string.bedtime_button_description)
         IconButton(
             onClick = onBedtimeClick,
             modifier = Modifier
                 .size(48.dp)
                 .semantics {
-                    contentDescription = "Bedtime mode. Tap to enter calming bedtime mode."
+                    contentDescription = bedtimeDesc
                 }
         ) {
             Icon(
@@ -316,7 +321,7 @@ private fun StatusCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = stringResource(if (isMonitoring) R.string.monitoring_active_title else R.string.monitoring_inactive_title),
                     style = MaterialTheme.typography.titleMedium,
@@ -334,7 +339,7 @@ private fun StatusCard(
 
             Button(
                 onClick = onToggleMonitoring,
-                modifier = Modifier.height(48.dp),
+                modifier = Modifier.height(48.dp).widthIn(min = 80.dp),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = if (isMonitoring) ChildColors.Secondary else ChildColors.Primary
@@ -415,11 +420,13 @@ private fun BatteryWhitelistDialog(
 ) {
     val scrollState = rememberScrollState()
 
+    val oemBrand = status.oemBrand.name.lowercase().replaceFirstChar { it.uppercase() }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = "Keep ChildHelper Running",
+                text = stringResource(R.string.battery_whitelist_title),
                 fontWeight = FontWeight.Bold,
                 fontSize = 18.sp
             )
@@ -432,9 +439,7 @@ private fun BatteryWhitelistDialog(
                     .verticalScroll(scrollState)
             ) {
                 Text(
-                    text = "To keep your child safe, ChildHelper must run continuously in the background. " +
-                            "Your device (${status.oemBrand.name.lowercase().replaceFirstChar { it.uppercase() }}) " +
-                            "may stop the app to save battery.",
+                    text = stringResource(R.string.battery_whitelist_body, oemBrand),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface
                 )
@@ -442,7 +447,7 @@ private fun BatteryWhitelistDialog(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
-                    text = "Follow these steps:",
+                    text = stringResource(R.string.battery_whitelist_follow_steps),
                     fontWeight = FontWeight.Bold,
                     style = MaterialTheme.typography.bodyMedium
                 )
@@ -479,7 +484,7 @@ private fun BatteryWhitelistDialog(
                 if (!status.isWhitelisted) {
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = "Also tap 'Allow Background' below to request system permission.",
+                        text = stringResource(R.string.battery_whitelist_also_tap),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                         fontWeight = FontWeight.Medium
@@ -499,7 +504,7 @@ private fun BatteryWhitelistDialog(
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = ChildColors.Primary)
                     ) {
-                        Text("Allow Background Running", fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.battery_whitelist_allow_background), fontWeight = FontWeight.Bold)
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -516,7 +521,7 @@ private fun BatteryWhitelistDialog(
                         contentColor = MaterialTheme.colorScheme.onSecondaryContainer
                     )
                 ) {
-                    Text("Open ${status.oemBrand.name.lowercase().replaceFirstChar { it.uppercase() }} Settings", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.battery_whitelist_open_settings, oemBrand), fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -525,7 +530,7 @@ private fun BatteryWhitelistDialog(
                     onClick = onDismiss,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 ) {
-                    Text("I'll do this later")
+                    Text(stringResource(R.string.battery_whitelist_later))
                 }
             }
         }
@@ -543,13 +548,14 @@ private fun QuickActionsRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         // Audio-only call Mom
+        val audioMomDesc = stringResource(R.string.audio_call_mom_description)
         Button(
             onClick = onAudioCallMom,
             modifier = Modifier
                 .weight(1f)
                 .height(56.dp)
                 .semantics {
-                    contentDescription = "Audio only call to Mom. No video."
+                    contentDescription = audioMomDesc
                 },
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
@@ -572,13 +578,14 @@ private fun QuickActionsRow(
         }
 
         // Audio-only call Dad
+        val audioDadDesc = stringResource(R.string.audio_call_dad_description)
         Button(
             onClick = onAudioCallDad,
             modifier = Modifier
                 .weight(1f)
                 .height(56.dp)
                 .semantics {
-                    contentDescription = "Audio only call to Dad. No video."
+                    contentDescription = audioDadDesc
                 },
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(
@@ -601,13 +608,14 @@ private fun QuickActionsRow(
         }
 
         // Pair with Parent
+        val pairDesc = stringResource(R.string.pair_with_parent_description)
         Button(
             onClick = onPairWithParent,
             modifier = Modifier
                 .weight(1f)
                 .height(56.dp)
                 .semantics {
-                    contentDescription = "Pair this device with a parent device."
+                    contentDescription = pairDesc
                 },
             shape = RoundedCornerShape(14.dp),
             colors = ButtonDefaults.buttonColors(

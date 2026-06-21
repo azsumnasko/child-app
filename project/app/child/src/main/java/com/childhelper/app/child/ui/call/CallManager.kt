@@ -5,6 +5,7 @@ import android.os.Handler
 import android.os.Looper
 import com.childhelper.core.common.model.CallSession
 import com.childhelper.core.common.model.CallStatus
+import com.childhelper.core.network.api.PairingApi
 import com.childhelper.core.network.signaling.WebRtcSignalingClient
 import com.childhelper.core.security.SecurePreferences
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -72,7 +73,8 @@ class CallManager(
     private val scope: CoroutineScope,
     private val peerConnectionManager: WebRtcPeerConnectionManager,
     private val cameraCaptureManager: CameraCaptureManager,
-    private val audioDeviceManager: AudioDeviceManager
+    private val audioDeviceManager: AudioDeviceManager,
+    private val pairingApi: PairingApi
 ) {
 
     private val _callState = MutableStateFlow<CallState>(CallState.Idle)
@@ -99,6 +101,32 @@ class CallManager(
     @Volatile private var adaptiveBitrateController: AdaptiveBitrateController? = null
     private val handler = Handler(Looper.getMainLooper())
 
+    init {
+        scope.launch {
+            signalingClient.incomingOffers.collect { sdpMessage ->
+                handleIncomingOffer(
+                    sdpMessage.sessionId,
+                    sdpMessage.fromDeviceId,
+                    SessionDescription(SessionDescription.Type.OFFER, sdpMessage.sdp)
+                )
+            }
+        }
+        scope.launch {
+            signalingClient.incomingIceCandidates.collect { iceMessage ->
+                peerConnectionManager.addIceCandidate(
+                    IceCandidate(iceMessage.sdpMid, iceMessage.sdpMLineIndex, iceMessage.candidate)
+                )
+            }
+        }
+        scope.launch {
+            signalingClient.incomingAnswers.collect { answer ->
+                peerConnectionManager.setRemoteDescription(
+                    SessionDescription(SessionDescription.Type.ANSWER, answer.sdp)
+                )
+            }
+        }
+    }
+
     /**
      * Initialize WebRTC peer connection factory.
      * Must be called before any call operations.
@@ -114,10 +142,9 @@ class CallManager(
      * @param hasVideo Whether to include video in the call
      */
     fun initiateCall(toDeviceId: String, hasVideo: Boolean = true) {
-        initializeWebRtc()
-
         scope.launch {
             try {
+                initializeWebRtc()
                 val childDeviceId = getChildDeviceId()
 
                 val session = CallSession(
@@ -131,9 +158,28 @@ class CallManager(
                 _isAudioOnly.value = !hasVideo
                 _callState.value = CallState.Connecting(session.sessionId)
 
-                val pc = createPeerConnectionWithListener(
-                    listOf(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer())
+                val turnCreds = try {
+                    pairingApi.getTurnCredentials()
+                } catch (e: Exception) {
+                    null
+                }
+
+                val iceServers = mutableListOf<PeerConnection.IceServer>(
+                    PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
                 )
+
+                turnCreds?.let { creds ->
+                    creds.urls.forEach { url ->
+                        iceServers.add(
+                            PeerConnection.IceServer.builder(url)
+                                .setUsername(creds.username)
+                                .setPassword(creds.password)
+                                .createIceServer()
+                        )
+                    }
+                }
+
+                val pc = createPeerConnectionWithListener(iceServers)
 
                 val factory = peerConnectionManager.getPeerConnectionFactory()
                     ?: throw IllegalStateException("PeerConnectionFactory not initialized")
@@ -195,9 +241,75 @@ class CallManager(
     }
 
     /**
+     * Handle an incoming SDP offer from a remote peer.
+     *
+     * Creates a [CallSession], sets the remote description on the peer connection,
+     * then delegates to [acceptCall] to create and send the answer SDP.
+     *
+     * @param sessionId The call session identifier from signaling.
+     * @param callerId The device ID of the peer who initiated the call.
+     * @param offer The remote SDP offer [SessionDescription].
+     */
+    fun handleIncomingOffer(sessionId: String, callerId: String, offer: SessionDescription) {
+        scope.launch {
+            try {
+                cleanup() // Dispose any existing call before starting new one
+                initializeWebRtc()
+                val childDeviceId = getChildDeviceId()
+
+                val turnCreds = try {
+                    pairingApi.getTurnCredentials()
+                } catch (e: Exception) {
+                    null
+                }
+
+                val iceServers = mutableListOf<PeerConnection.IceServer>(
+                    PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
+                )
+                turnCreds?.let { creds ->
+                    creds.urls.forEach { url ->
+                        iceServers.add(
+                            PeerConnection.IceServer.builder(url)
+                                .setUsername(creds.username)
+                                .setPassword(creds.password)
+                                .createIceServer()
+                        )
+                    }
+                }
+
+                val session = CallSession(
+                    callerId = callerId,
+                    calleeId = childDeviceId,
+                    hasVideo = true,
+                    status = CallStatus.CONNECTING
+                )
+
+                createPeerConnectionWithListener(iceServers)
+
+                _currentSession.value = session
+                _callState.value = CallState.Incoming(sessionId, callerId)
+
+                setRemoteDescription(offer)
+
+                val factory = peerConnectionManager.getPeerConnectionFactory()
+                    ?: throw IllegalStateException("PeerConnectionFactory not initialized")
+                val eglBase = peerConnectionManager.getEglBase()
+                cameraCaptureManager.startCapture(factory, eglBase, peerConnectionManager.getPeerConnection())
+                audioDeviceManager.startAudioCapture(factory, peerConnectionManager.getPeerConnection())
+
+                acceptCall(sessionId)
+            } catch (e: Exception) {
+                _callState.value = CallState.Error(e.message ?: "Failed to handle incoming call")
+                cleanup()
+            }
+        }
+    }
+
+    /**
      * End the current call and clean up resources.
      */
     fun endCall() {
+        if (_callState.value is CallState.Idle || _callState.value is CallState.Ended) return
         val sessionId = _currentSession.value?.sessionId
 
         _currentSession.value?.let { session ->

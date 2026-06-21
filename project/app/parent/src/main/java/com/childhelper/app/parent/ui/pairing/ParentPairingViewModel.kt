@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
@@ -105,6 +106,7 @@ class ParentPairingViewModel @Inject constructor(
 
     fun startP2pDiscovery() {
         _isP2pMode.value = true; _pairingState.value = PairingState.GENERATING; _errorMessage.value = null
+        if (parentEcdhKeyPair == null) parentEcdhKeyPair = pairingCrypto.generateEcdhKeyPair()
         val name = p2pChildDeviceId?.let { "Parent-${it.take(12)}" } ?: "ParentHelper"
         p2pManager.initialize(name); p2pManager.startDiscovery()
         viewModelScope.launch {
@@ -128,15 +130,19 @@ class ParentPairingViewModel @Inject constructor(
     }
 
     private fun performP2pKeyExchange() {
-        val childKeyB64 = p2pChildPublicKeyB64 ?: return
         val ecdhKeyPair = parentEcdhKeyPair ?: return
         viewModelScope.launch {
             try {
+                val parentDeviceId = securePreferences.getString("device_id") ?: ""
                 val parentPublicKeyB64 = CryptoUtil.base64Encode(ecdhKeyPair.public.encoded)
-                val keyPayload = buildJsonObject { put("publicKey", parentPublicKeyB64) }
+                val keyPayload = buildJsonObject {
+                    put("publicKey", parentPublicKeyB64)
+                    put("deviceId", parentDeviceId)
+                }
                 p2pManager.sendMessage(P2pMessage(P2pMessageType.KEY_EXCHANGE, json.encodeToString(keyPayload)))
 
-                p2pManager.messageFlow.collect { msg ->
+                withTimeout(15000) {
+                    p2pManager.messageFlow.collect { msg ->
                     if (msg.type == P2pMessageType.KEY_EXCHANGE) {
                         val obj = json.decodeFromString<JsonObject>(msg.payload)
                         val childEcdhPublicKeyB64 = obj["publicKey"]?.jsonPrimitive?.content ?: return@collect
@@ -147,10 +153,15 @@ class ParentPairingViewModel @Inject constructor(
                         val sharedSecret = pairingCrypto.deriveSharedSecret(ecdhKeyPair, childPublicKey)
                         securePreferences.putString("shared_secret", CryptoUtil.base64Encode(sharedSecret))
                         securePreferences.putBoolean("is_paired", true)
+                        val childId = p2pChildDeviceId
+                        if (!childId.isNullOrBlank()) {
+                            securePreferences.putString("paired_child_device_id", childId)
+                        }
                         return@collect
                     }
                 }
-            } catch (_: Exception) { }
+                }
+            } catch (e: Exception) { android.util.Log.e("ParentP2pExchange", "Key exchange failed", e) }
         }
     }
 

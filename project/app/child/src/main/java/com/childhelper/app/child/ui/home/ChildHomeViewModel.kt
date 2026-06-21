@@ -1,12 +1,15 @@
 package com.childhelper.app.child.ui.home
 
 import android.app.Application
+import android.content.Intent
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
+import com.childhelper.app.child.R
 import com.childhelper.app.child.detection.CryDetector
 import com.childhelper.app.child.detection.MotionDetector
 import com.childhelper.app.child.service.MonitoringCoordinator
+import com.childhelper.app.child.service.MonitoringService
 import com.childhelper.app.child.service.OemBatteryManager
 import com.childhelper.app.child.ui.bedtime.VoicePromptManager
 import com.childhelper.core.common.model.Contact
@@ -64,9 +67,7 @@ class ChildHomeViewModel @Inject constructor(
         }
         checkBatteryWhitelist()
 
-        // P0-4 FIX: Observe the single source of truth for monitoring state.
-        // This guarantees the UI always reflects the real state even when
-        // MonitoringService or thermal throttling changes it.
+        // Observe the single source of truth for monitoring state
         viewModelScope.launch {
             monitoringCoordinator.isMonitoring.collect { isActive ->
                 _uiState.update { it.copy(isMonitoring = isActive) }
@@ -108,17 +109,18 @@ class ChildHomeViewModel @Inject constructor(
 
     private fun loadContacts() {
         viewModelScope.launch {
-            // In production, load from secure preferences or repository
-            // For now, use sample data that would be set up during pairing
+            val parentDeviceId = securePreferences.getString("paired_parent_device_id")
+            val isPaired = securePreferences.getBoolean("is_paired", false)
+            val deviceIdBase = if (isPaired && parentDeviceId != null) parentDeviceId else "1"
             val defaultContacts = listOf(
                 Contact(
-                    id = "1",
+                    id = deviceIdBase,
                     name = "Mom",
                     role = ContactRole.MOTHER,
                     isPrimary = true
                 ),
                 Contact(
-                    id = "2",
+                    id = deviceIdBase,
                     name = "Dad",
                     role = ContactRole.FATHER,
                     isPrimary = false
@@ -128,16 +130,14 @@ class ChildHomeViewModel @Inject constructor(
         }
     }
 
-    fun onContactClick(contact: Contact) {
+    fun onContactClick(contact: Contact, hasVideo: Boolean = true) {
+        if (_navigationEvent.value != null) return
         val displayName = when (contact.role) {
             ContactRole.MOTHER -> "Mom"
             ContactRole.FATHER -> "Dad"
             ContactRole.GUARDIAN -> contact.name
         }
-        if (contact.isPrimary) {
-            speakText("Calling $displayName")
-        }
-        _navigationEvent.value = HomeNavigationEvent.NavigateToCall(contact.id, hasVideo = true, contactName = displayName)
+        _navigationEvent.value = HomeNavigationEvent.NavigateToCall(contact.id, hasVideo = hasVideo, contactName = displayName)
     }
 
     fun onSosClick() {
@@ -145,7 +145,7 @@ class ChildHomeViewModel @Inject constructor(
     }
 
     fun onBedtimeModeClick() {
-        speakText("Bedtime mode")
+        speakText(getApplication<Application>().getString(R.string.bedtime_mode_voice))
         _navigationEvent.value = HomeNavigationEvent.NavigateToBedtime
     }
 
@@ -153,25 +153,37 @@ class ChildHomeViewModel @Inject constructor(
         _navigationEvent.value = HomeNavigationEvent.NavigateToPairing
     }
 
-    fun startMonitoring(config: DetectionConfig, lifecycleOwner: LifecycleOwner) {
+    fun startMonitoring(config: DetectionConfig) {
+        val app = getApplication<Application>()
+        val intent = Intent(app, MonitoringService::class.java).apply {
+            action = MonitoringService.ACTION_START_MONITORING
+            putExtra(MonitoringService.EXTRA_CONFIG, MonitoringService.serializeConfig(config))
+        }
+        ContextCompat.startForegroundService(app, intent)
+        speakText(app.getString(R.string.monitoring_started_voice))
+    }
+
+    fun autoStartIfNeeded(config: DetectionConfig) {
         viewModelScope.launch {
-            // P0-4 FIX: Delegate to MonitoringCoordinator — the single source of truth.
-            // This prevents race conditions where the ViewModel and Service
-            // independently start/stop detectors and disagree on state.
-            monitoringCoordinator.startMonitoring(config, lifecycleOwner)
-            speakText("Monitoring started")
+            val shouldAutoStart = securePreferences.getBoolean("monitoring_auto_start", false)
+            if (shouldAutoStart && !monitoringCoordinator.isMonitoring.value) {
+                securePreferences.putBoolean("monitoring_auto_start", false)
+                startMonitoring(config)
+            }
         }
     }
 
     fun stopMonitoring() {
-        viewModelScope.launch {
-            monitoringCoordinator.stopMonitoring()
-            speakText("Monitoring stopped")
+        val app = getApplication<Application>()
+        val intent = Intent(app, MonitoringService::class.java).apply {
+            action = MonitoringService.ACTION_STOP_MONITORING
         }
+        ContextCompat.startForegroundService(app, intent)
+        speakText(app.getString(R.string.monitoring_stopped_voice))
     }
 
     fun speakWelcomeMessage() {
-        speakText("Tap Mom or Dad to call. Hold the SOS button for help.")
+        speakText(getApplication<Application>().getString(R.string.home_welcome_message))
     }
 
     fun speakText(text: String) {
@@ -187,8 +199,6 @@ class ChildHomeViewModel @Inject constructor(
     override fun onCleared() {
         super.onCleared()
         voicePromptManager.shutdown()
-        // P0-4 FIX: Stop via the coordinator to keep state consistent.
-        monitoringCoordinator.stopMonitoring()
     }
 }
 

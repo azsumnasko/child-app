@@ -257,31 +257,43 @@ fun LiveViewScreen(
 @Composable
 private fun VideoRenderer(
     isVideoEnabled: Boolean,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: LiveViewViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
 
     if (isVideoEnabled) {
-        val eglBase = remember { EglBase.create() }
+        val eglBase = viewModel.remoteEglBase
         val surfaceView = remember {
             SurfaceViewRenderer(context).apply {
-                init(eglBase.eglBaseContext, null)
+                eglBase?.eglBaseContext?.let { init(it, null) }
                 setScalingType(RendererCommon.ScalingType.SCALE_ASPECT_FIT)
                 setEnableHardwareScaler(true)
+            }
+        }
+        val remoteTrack by viewModel.remoteVideoTrack.collectAsState()
+
+        DisposableEffect(remoteTrack) {
+            remoteTrack?.let { track ->
+                track.addSink(surfaceView)
+            }
+            onDispose {
+                remoteTrack?.removeSink(surfaceView)
             }
         }
 
         DisposableEffect(Unit) {
             onDispose {
                 surfaceView.release()
-                eglBase.release()
             }
         }
+
+        val videoStreamDesc = stringResource(R.string.live_view_video_stream_desc)
 
         AndroidView(
             factory = { surfaceView },
             modifier = modifier.semantics {
-                contentDescription = "Live video stream from child device"
+                contentDescription = videoStreamDesc
             }
         )
     } else {
@@ -304,7 +316,7 @@ private fun VideoRenderer(
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Video Disabled",
+                    text = stringResource(R.string.live_view_video_disabled),
                     color = Color.White.copy(alpha = 0.5f),
                     style = MaterialTheme.typography.bodyLarge
                 )
@@ -350,8 +362,8 @@ private fun ConnectionStateOverlay(
                         Text(
                             text = when (connectionState) {
                                 LiveConnectionState.CONNECTING -> stringResource(R.string.live_view_connecting)
-                                LiveConnectionState.SIGNALING -> "Negotiating..."
-                                LiveConnectionState.RECONNECTING -> "Reconnecting..."
+                                LiveConnectionState.SIGNALING -> stringResource(R.string.live_view_negotiating)
+                                LiveConnectionState.RECONNECTING -> stringResource(R.string.live_view_reconnecting)
                                 else -> ""
                             },
                             color = Color.White,
@@ -367,7 +379,7 @@ private fun ConnectionStateOverlay(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Connection Lost",
+                            text = stringResource(R.string.live_view_disconnected),
                             color = Color.White,
                             style = MaterialTheme.typography.bodyLarge
                         )
@@ -375,7 +387,7 @@ private fun ConnectionStateOverlay(
                         OutlinedButton(
                             onClick = { /* retry in dialog */ }
                         ) {
-                            Text("Reconnect", color = Color.White)
+                            Text(stringResource(R.string.retry_label), color = Color.White)
                         }
                     }
                     LiveConnectionState.FAILED -> {
@@ -387,7 +399,7 @@ private fun ConnectionStateOverlay(
                         )
                         Spacer(modifier = Modifier.height(16.dp))
                         Text(
-                            text = "Connection Failed",
+                            text = stringResource(R.string.live_view_connection_failed),
                             color = Color.White,
                             style = MaterialTheme.typography.bodyLarge
                         )
@@ -427,9 +439,9 @@ private fun ControlsOverlay(
             StreamMode.values().forEach { mode ->
                 val selected = uiState.streamMode == mode
                 val label = when (mode) {
-                    StreamMode.VIDEO_AUDIO -> "Video + Audio"
-                    StreamMode.AUDIO_ONLY -> "Audio Only"
-                    StreamMode.VIDEO_ONLY -> "Video Only"
+                    StreamMode.VIDEO_AUDIO -> stringResource(R.string.live_view_stream_video_audio)
+                    StreamMode.AUDIO_ONLY -> stringResource(R.string.live_view_stream_audio_only)
+                    StreamMode.VIDEO_ONLY -> stringResource(R.string.live_view_stream_video_only)
                 }
                 TextButton(
                     onClick = { onSetStreamMode(mode) }
@@ -455,8 +467,8 @@ private fun ControlsOverlay(
             ControlButton(
                 icon = if (uiState.isAudioEnabled) Icons.Default.VolumeUp
                 else Icons.Default.VolumeOff,
-                contentDescription = if (uiState.isAudioEnabled) "Mute audio"
-                else "Unmute audio",
+                contentDescription = if (uiState.isAudioEnabled) stringResource(R.string.live_view_mute_audio)
+                else stringResource(R.string.live_view_unmute_audio),
                 onClick = onToggleAudio,
                 isActive = uiState.isAudioEnabled
             )
@@ -465,8 +477,8 @@ private fun ControlsOverlay(
             ControlButton(
                 icon = if (uiState.isVideoEnabled) Icons.Default.Videocam
                 else Icons.Default.VideocamOff,
-                contentDescription = if (uiState.isVideoEnabled) "Turn off video"
-                else "Turn on video",
+                contentDescription = if (uiState.isVideoEnabled) stringResource(R.string.live_view_turn_off_video)
+                else stringResource(R.string.live_view_turn_on_video),
                 onClick = onToggleVideo,
                 isActive = uiState.isVideoEnabled
             )
@@ -481,7 +493,7 @@ private fun ControlsOverlay(
             ) {
                 Icon(
                     imageVector = Icons.Default.CallEnd,
-                    contentDescription = "End live view",
+                    contentDescription = stringResource(R.string.end_live_view_label),
                     modifier = Modifier.size(28.dp)
                 )
             }
@@ -490,8 +502,8 @@ private fun ControlsOverlay(
             ControlButton(
                 icon = if (uiState.isTalkBackEnabled) Icons.Default.Mic
                 else Icons.Default.MicOff,
-                contentDescription = if (uiState.isTalkBackEnabled) "Disable talk-back"
-                else "Enable talk-back",
+                contentDescription = if (uiState.isTalkBackEnabled) stringResource(R.string.live_view_disable_talkback)
+                else stringResource(R.string.live_view_enable_talkback),
                 onClick = onToggleTalkBack,
                 isActive = uiState.isTalkBackEnabled,
                 showAudioLevel = uiState.isTalkBackEnabled,
@@ -501,7 +513,7 @@ private fun ControlsOverlay(
             // Hearing/speaker mode (placeholder for speaker toggle)
             ControlButton(
                 icon = Icons.Default.Hearing,
-                contentDescription = "Speaker mode",
+                contentDescription = stringResource(R.string.live_view_speaker_mode),
                 onClick = { /* toggle speaker */ },
                 isActive = false
             )
@@ -628,8 +640,8 @@ private fun ConnectionProgressDialog(
             Text(
                 text = when (connectionState) {
                     LiveConnectionState.CONNECTING -> stringResource(R.string.live_view_connecting)
-                    LiveConnectionState.RECONNECTING -> "Reconnecting..."
-                    LiveConnectionState.FAILED -> "Connection Failed"
+                    LiveConnectionState.RECONNECTING -> stringResource(R.string.live_view_reconnecting)
+                    LiveConnectionState.FAILED -> stringResource(R.string.live_view_connection_failed)
                     else -> stringResource(R.string.live_view_connecting)
                 }
             )
@@ -645,12 +657,12 @@ private fun ConnectionProgressDialog(
                     CircularProgressIndicator(modifier = Modifier.size(48.dp))
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Establishing secure connection to child device...",
+                        text = stringResource(R.string.live_view_establishing_secure),
                         textAlign = TextAlign.Center
                     )
                 } else if (connectionState == LiveConnectionState.FAILED) {
                     Text(
-                        text = "Could not connect to the child device. Please check the device status and try again.",
+                        text = stringResource(R.string.live_view_could_not_connect),
                         textAlign = TextAlign.Center
                     )
                 }
@@ -659,13 +671,13 @@ private fun ConnectionProgressDialog(
         confirmButton = {
             if (connectionState == LiveConnectionState.FAILED) {
                 Button(onClick = onRetry) {
-                    Text("Retry")
+                    Text(stringResource(R.string.retry_label))
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Cancel")
+                Text(stringResource(R.string.cancel_label))
             }
         }
     )

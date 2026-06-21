@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -52,12 +53,12 @@ fun ContactButton(
 ) {
     val context = LocalContext.current
     val roleLabel = when (contact.role) {
-        ContactRole.MOTHER -> "Mom"
-        ContactRole.FATHER -> "Dad"
+        ContactRole.MOTHER -> stringResource(R.string.contact_mom_label)
+        ContactRole.FATHER -> stringResource(R.string.contact_dad_label)
         ContactRole.GUARDIAN -> contact.name
     }
 
-    val contentDesc = "Call $roleLabel. ${if (contact.isPrimary) "Primary contact." else ""} Tap to call."
+    val contentDesc = stringResource(R.string.contact_call_description, roleLabel)
 
     Button(
         onClick = onClick,
@@ -138,12 +139,12 @@ fun CompactContactButton(
     buttonColor: Color
 ) {
     val roleLabel = when (contact.role) {
-        ContactRole.MOTHER -> "Mom"
-        ContactRole.FATHER -> "Dad"
+        ContactRole.MOTHER -> stringResource(R.string.contact_mom_label)
+        ContactRole.FATHER -> stringResource(R.string.contact_dad_label)
         ContactRole.GUARDIAN -> contact.name
     }
 
-    val contentDesc = "Call $roleLabel. Tap to call."
+    val contentDesc = stringResource(R.string.contact_call_description, roleLabel)
 
     Button(
         onClick = onClick,

@@ -31,6 +31,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -75,7 +76,16 @@ fun CallScreen(
     viewModel: CallViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val navEvent by viewModel.navigationEvent.collectAsState()
     val context = LocalContext.current
+
+    // Handle navigation events (e.g. auto-navigate back when call ends)
+    LaunchedEffect(navEvent) {
+        if (navEvent is CallNavigationEvent.NavigateBack) {
+            viewModel.consumeNavigationEvent()
+            navController.popBackStack()
+        }
+    }
 
     // Start the call on first composition
     DisposableEffect(contactId) {

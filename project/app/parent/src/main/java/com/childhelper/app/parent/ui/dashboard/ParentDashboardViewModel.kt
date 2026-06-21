@@ -52,11 +52,11 @@ class ParentDashboardViewModel @Inject constructor(
 
     private val _deviceStatus = MutableStateFlow(
         DeviceStatus(
-            deviceId = "child_device_001",
-            isOnline = true,
-            batteryPercent = 78,
-            isCharging = true,
-            networkType = "wifi",
+            deviceId = "",
+            isOnline = false,
+            batteryPercent = 0,
+            isCharging = false,
+            networkType = "",
             monitorMode = MonitorMode.IDLE,
             lastSeen = System.currentTimeMillis()
         )
@@ -64,11 +64,19 @@ class ParentDashboardViewModel @Inject constructor(
 
     private val _isRefreshing = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
-    private val _childName = MutableStateFlow("Child Device")
+    private val _childName = MutableStateFlow("")
 
     init {
         viewModelScope.launch {
-            securePreferences.getString(KEY_CHILD_NAME)?.let { _childName.value = it }
+            val childId = securePreferences.getString(KEY_PAIRED_CHILD_DEVICE_ID)
+            val isPaired = securePreferences.getBoolean("is_paired", false)
+            if (childId != null && isPaired) {
+                _deviceStatus.value = _deviceStatus.value.copy(deviceId = childId)
+                val name = securePreferences.getString(KEY_CHILD_NAME) ?: "Child Device"
+                _childName.value = name
+            } else {
+                _childName.value = "No device paired"
+            }
         }
     }
 
@@ -202,3 +210,4 @@ sealed class DashboardNavigationEvent {
 private const val KEY_CHILD_NAME = "parent_child_name"
 private const val KEY_LAST_DEVICE_ID = "parent_last_device_id"
 private const val KEY_LAST_ONLINE = "parent_last_online"
+private const val KEY_PAIRED_CHILD_DEVICE_ID = "paired_child_device_id"

@@ -51,6 +51,7 @@ class PairingRepository @Inject constructor(
         return when (result) {
             is SafeResult.Success -> {
                 storeSession(result.data)
+                storeKeyPair(result.data.sessionId, keyPair)
                 SafeResult.Success(result.data)
             }
             is SafeResult.Failure -> {
@@ -85,6 +86,8 @@ class PairingRepository @Inject constructor(
                 storeSession(session)
                 securePreferences.putString("device_id", parentDeviceId)
                 securePreferences.putBoolean("is_paired", true)
+                securePreferences.putString("paired_child_device_id", session.childDeviceId)
+                securePreferences.putString("parent_child_name", "Child Device")
                 SafeResult.Success(session)
             }
             is SafeResult.Failure -> {
@@ -118,6 +121,8 @@ class PairingRepository @Inject constructor(
                 storeSession(session)
                 securePreferences.putString("device_id", parentDeviceId)
                 securePreferences.putBoolean("is_paired", true)
+                securePreferences.putString("paired_child_device_id", session.childDeviceId)
+                securePreferences.putString("parent_child_name", "Child Device")
                 SafeResult.Success(session)
             }
             is SafeResult.Failure -> result
@@ -167,6 +172,30 @@ class PairingRepository @Inject constructor(
 
     suspend fun getStoredSession(sessionId: String): PairingSession? {
         return loadSession(sessionId)
+    }
+
+    suspend fun completeChildPairing(sessionId: String) {
+        val session = loadSession(sessionId) ?: return
+        val parentPublicKeyB64 = session.parentPublicKey ?: return
+        val keyPair = childKeyPair ?: return
+        val parentPublicKeyBytes = CryptoUtil.base64Decode(parentPublicKeyB64)
+        val keyFactory = java.security.KeyFactory.getInstance("EC")
+        val publicKeySpec = java.security.spec.X509EncodedKeySpec(parentPublicKeyBytes)
+        val parentPublicKey = keyFactory.generatePublic(publicKeySpec)
+        val sharedSecret = pairingCrypto.deriveSharedSecret(keyPair, parentPublicKey)
+        securePreferences.putString("shared_secret", CryptoUtil.base64Encode(sharedSecret))
+        securePreferences.putBoolean("is_paired", true)
+        securePreferences.putString("paired_parent_device_id", session.parentDeviceId ?: "")
+        childKeyPair = null
+        logPairingVerification("completeChildPairing")
+    }
+
+    private suspend fun logPairingVerification(source: String) {
+        val isPaired = securePreferences.getBoolean("is_paired", false)
+        val parentDeviceId = securePreferences.getString("paired_parent_device_id")
+        val sharedSecret = securePreferences.getString("shared_secret")
+        val deviceId = securePreferences.getString("device_id")
+        android.util.Log.i("PairingVerify", "[$source] is_paired=$isPaired, paired_parent_device_id=${parentDeviceId ?: "null"}, shared_secret=${if (sharedSecret != null) "SET" else "MISSING"}, device_id=${deviceId ?: "null"}")
     }
 
     private suspend fun localInitiateFallback(
@@ -240,6 +269,8 @@ class PairingRepository @Inject constructor(
         storeSession(completedSession)
         securePreferences.putString("device_id", parentDeviceId)
         securePreferences.putBoolean("is_paired", true)
+        securePreferences.putString("paired_child_device_id", stored.childDeviceId)
+        securePreferences.putString("parent_child_name", "Child Device")
 
         return SafeResult.Success(completedSession)
     }

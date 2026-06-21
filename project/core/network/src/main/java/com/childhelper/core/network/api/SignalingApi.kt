@@ -80,6 +80,21 @@ interface SignalingApi {
     ): List<SignalingMessage>
 
     /**
+     * Polls for pending alert notifications addressed to the parent device.
+     *
+     * When FCM is unavailable, the parent app polls this endpoint periodically
+     * to fetch alerts that were posted by child devices via [sendNotification].
+     * Each alert is returned only once and then marked as delivered.
+     *
+     * @param parentDeviceId The parent device ID to fetch alerts for.
+     * @return A list of JSON alert payloads, empty if none pending.
+     */
+    @GET("/api/v1/notify/pending/{parentDeviceId}")
+    suspend fun getPendingAlerts(
+        @Path("parentDeviceId") parentDeviceId: String
+    ): List<JsonObject>
+
+    /**
      * Sends a guardian notification to the backend for FCM delivery.
      *
      * The backend forwards this metadata-only payload to all registered

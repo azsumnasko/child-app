@@ -29,6 +29,7 @@ import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
+import kotlinx.coroutines.withTimeout
 import java.security.KeyPair
 import javax.inject.Inject
 
@@ -64,6 +65,7 @@ class ChildPairingViewModel @Inject constructor(
     private var currentSessionId: String? = null
     private var pollingJob: Job? = null
     private var p2pJob: Job? = null
+    private var p2pDiscoverJob: Job? = null
     private var childEcdhKeyPair: KeyPair? = null
 
     fun startPairing() {
@@ -88,14 +90,32 @@ class ChildPairingViewModel @Inject constructor(
                     )
                     _pairingState.value = PairingState.WAITING
                     pollingJob = viewModelScope.launch {
-                        while (true) {
+                        var attempts = 0
+                        while (attempts < 60) {
                             delay(2000)
+                            attempts++
                             val s = pairingRepository.getPairingStatus(_sessionId.value)
-                            if (s is SafeResult.Success && s.data.status == PairingStatus.COMPLETED) {
-                                _pairingState.value = PairingState.PAIRED
-                                return@launch
+                            when (s) {
+                                is SafeResult.Success -> {
+                                    if (s.data.status == PairingStatus.COMPLETED) {
+                                        pairingRepository.completeChildPairing(_sessionId.value)
+                                        logPairingState("server")
+                                        _pairingState.value = PairingState.PAIRED
+                                        securePreferences.putBoolean("monitoring_auto_start", true)
+                                        return@launch
+                                    }
+                                }
+                                is SafeResult.Failure -> {
+                                    if (attempts >= 60) {
+                                        _errorMessage.value = "Pairing timed out. Please try again."
+                                        _pairingState.value = PairingState.ERROR
+                                        return@launch
+                                    }
+                                }
                             }
                         }
+                        _errorMessage.value = "Pairing timed out. Please try again."
+                        _pairingState.value = PairingState.ERROR
                     }
                 }
                 is SafeResult.Failure -> {
@@ -144,11 +164,12 @@ class ChildPairingViewModel @Inject constructor(
                 _pairingState.value = PairingState.WAITING
 
                 // Monitor connection state
-                p2pJob = launch {
+                val peerJob = launch {
                     p2pManager.peerFlow.collect { state ->
                         when (state) {
                             is LocalPeerState.Connected -> {
                                 _pairingState.value = PairingState.PAIRED
+                                securePreferences.putBoolean("monitoring_auto_start", true)
                                 handleP2pKeyExchange()
                             }
                             is LocalPeerState.Error -> {
@@ -160,11 +181,13 @@ class ChildPairingViewModel @Inject constructor(
                     }
                 }
 
-                launch {
+                val discoverJob = launch {
                     p2pManager.discoveredPeers.collect { peers ->
                         peers.firstOrNull()?.let { p2pManager.connectToPeer(it) }
                     }
                 }
+                p2pJob = peerJob
+                p2pDiscoverJob = discoverJob
             } catch (e: Exception) {
                 _errorMessage.value = e.message ?: "P2P pairing failed"
                 _pairingState.value = PairingState.ERROR
@@ -175,7 +198,8 @@ class ChildPairingViewModel @Inject constructor(
     private suspend fun handleP2pKeyExchange() {
         val ecdhPair = childEcdhKeyPair ?: return
         try {
-            p2pManager.messageFlow.collect { msg ->
+            withTimeout(15000) {
+                p2pManager.messageFlow.collect { msg ->
                 if (msg.type == P2pMessageType.KEY_EXCHANGE) {
                     val obj = json.decodeFromString<JsonObject>(msg.payload)
                     val parentPublicKeyB64 = obj["publicKey"]?.jsonPrimitive?.content ?: return@collect
@@ -187,6 +211,11 @@ class ChildPairingViewModel @Inject constructor(
                     securePreferences.putString("shared_secret", CryptoUtil.base64Encode(sharedSecret))
                     securePreferences.putBoolean("is_paired", true)
 
+                    val parentDeviceId = obj["deviceId"]?.jsonPrimitive?.content ?: return@collect
+                    securePreferences.putString("paired_parent_device_id", parentDeviceId)
+
+                    logPairingState("p2p")
+
                     // Send child's ECDH public key back to parent
                     val childPublicKeyB64 = CryptoUtil.base64Encode(ecdhPair.public.encoded)
                     val responsePayload = buildJsonObject { put("publicKey", childPublicKeyB64) }
@@ -194,13 +223,15 @@ class ChildPairingViewModel @Inject constructor(
                     return@collect
                 }
             }
-        } catch (_: Exception) { }
+            }
+        } catch (e: Exception) { android.util.Log.e("ChildP2pExchange", "Key exchange failed", e) }
     }
 
     override fun onCleared() {
         super.onCleared()
         pollingJob?.cancel()
         p2pJob?.cancel()
+        p2pDiscoverJob?.cancel()
     }
 
     fun cancelPairing() {
@@ -208,6 +239,8 @@ class ChildPairingViewModel @Inject constructor(
         pollingJob = null
         p2pJob?.cancel()
         p2pJob = null
+        p2pDiscoverJob?.cancel()
+        p2pDiscoverJob = null
 
         if (_isP2pMode.value) p2pManager.disconnect()
 
@@ -233,5 +266,15 @@ class ChildPairingViewModel @Inject constructor(
         _errorMessage.value = null
         currentSessionId = null
         _isP2pMode.value = false
+    }
+
+    private fun logPairingState(source: String) {
+        viewModelScope.launch {
+            val isPaired = securePreferences.getBoolean("is_paired", false)
+            val parentDeviceId = securePreferences.getString("paired_parent_device_id")
+            val sharedSecret = securePreferences.getString("shared_secret")
+            val deviceId = securePreferences.getString("device_id")
+            android.util.Log.i("PairingVerify", "[$source] is_paired=$isPaired, paired_parent_device_id=${parentDeviceId ?: "null"}, shared_secret=${if (sharedSecret != null) "SET" else "MISSING"}, device_id=${deviceId ?: "null"}")
+        }
     }
 }

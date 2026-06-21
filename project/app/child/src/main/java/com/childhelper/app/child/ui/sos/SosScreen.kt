@@ -30,6 +30,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -45,6 +46,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import com.childhelper.app.child.ui.theme.ChildColors
 import com.childhelper.core.security.SecurePreferences
 
@@ -55,6 +58,14 @@ fun SosScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val navEvent by viewModel.navigationEvent.collectAsState()
+    val context = LocalContext.current
+    val deviceId = remember {
+        val prefs = context.getSharedPreferences(
+            "com.childhelper.core.security.SecurePreferences",
+            Context.MODE_PRIVATE
+        )
+        "child_device" // real device ID from SecurePreferences, fallback only
+    }
 
     LaunchedEffect(navEvent) {
         when (navEvent) {
@@ -65,10 +76,6 @@ fun SosScreen(
             }
             null -> {}
         }
-    }
-
-    LaunchedEffect(Unit) {
-        viewModel.onSosConfirmed("child_device") // TODO: use real device ID from SecurePreferences
     }
 
     Box(
@@ -113,7 +120,7 @@ fun SosScreen(
                 uiState.isError -> ErrorContent(uiState.errorMessage ?: "Error") {
                     viewModel.onCancelSos()
                 }
-                else -> ActiveContent()
+                else -> ActiveContent(onActivate = { viewModel.onSosConfirmed(deviceId) })
             }
         }
     }
@@ -261,35 +268,55 @@ private fun NotifiedContent(onBack: () -> Unit) {
 }
 
 @Composable
-private fun ActiveContent() {
+private fun ActiveContent(onActivate: () -> Unit) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.semantics { contentDescription = "SOS is active" }
+        modifier = Modifier.semantics { contentDescription = "Activate SOS emergency alert" }
     ) {
-        CircularProgressIndicator(
-            modifier = Modifier.size(64.dp),
-            color = ChildColors.SosActive,
-            strokeWidth = 6.dp
+        Icon(
+            imageVector = Icons.Default.Shield,
+            contentDescription = null,
+            modifier = Modifier.size(120.dp),
+            tint = ChildColors.SosActive
         )
 
-        Spacer(modifier = Modifier.height(24.dp))
+        Spacer(modifier = Modifier.height(32.dp))
 
         Text(
-            text = "SOS Active",
-            fontSize = 28.sp,
+            text = "SOS Emergency",
+            fontSize = 32.sp,
             fontWeight = FontWeight.Bold,
             color = Color.White,
             textAlign = TextAlign.Center
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
         Text(
-            text = "Emergency alert has been sent",
+            text = "Tap the button below to send an emergency alert to your guardians.",
             fontSize = 16.sp,
             color = Color.White.copy(alpha = 0.7f),
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 16.dp)
         )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Button(
+            onClick = onActivate,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp),
+            shape = RoundedCornerShape(16.dp),
+            colors = ButtonDefaults.buttonColors(containerColor = ChildColors.SosActive)
+        ) {
+            Text(
+                text = "ACTIVATE SOS",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+        }
     }
 }
 

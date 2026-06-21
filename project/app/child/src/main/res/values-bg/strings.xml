@@ -31,6 +31,9 @@
     <string name="contact_mom_description">Обадете се на Мама</string>
     <string name="contact_dad_description">Обадете се на Татко</string>
     <string name="contact_guardian_description">Обадете се на Настойник</string>
+    <string name="contact_mom_label">Мама</string>
+    <string name="contact_dad_label">Тате</string>
+    <string name="contact_call_description">Обаждане на %s. Докоснете, за да се обадите.</string>
 
     <!-- SOS Screen -->
     <string name="sos_title">SOS</string>
@@ -123,6 +126,7 @@
     <string name="pairing_error_title">Грешка!</string>
     <string name="pairing_try_again">Опитайте отново</string>
     <string name="pairing_button">Свързване</string>
+    <string name="pair_with_parent_description">Свържете това устройство с родителско устройство.</string>
     <string name="pairing_nearby_p2p_button">Близко P2P свързване</string>
     <string name="pairing_nearby_p2p_content_desc">Започни близко P2P свързване</string>
     <string name="pairing_qr_image_desc">QR код за свързване</string>
@@ -140,4 +144,24 @@
     <string name="pairing_qr_error_content">Генерирането на QR код не успя</string>
     <string name="pairing_qr_error_label">Грешка с QR</string>
     <string name="pairing_device_label">Устройство: %s</string>
+
+    <!-- Battery Whitelist Dialog -->
+    <string name="battery_whitelist_title">Запазване на ChildHelper</string>
+    <string name="battery_whitelist_body">За да пази детето Ви, ChildHelper трябва да работи непрекъснато. Вашето устройство (%s) може да спре приложението за пестене на батерия.</string>
+    <string name="battery_whitelist_follow_steps">Следвайте тези стъпки:</string>
+    <string name="battery_whitelist_also_tap">Също докоснете „Разрешаване на фонова работа“ по-долу, за да поискате разрешение от системата.</string>
+    <string name="battery_whitelist_allow_background">Разрешаване на фонова работа</string>
+    <string name="battery_whitelist_open_settings">Отваряне на настройките на %s</string>
+    <string name="battery_whitelist_later">Ще го направя по-късно</string>
+
+    <!-- Bedtime Messages (string-array) -->
+    <string-array name="bedtime_messages">
+        <item>Лека нощ. Спи спокойно. Мама и Татко те пазят.</item>
+        <item>Всичко е наред. Затвори очи и сънувай хубави сънища.</item>
+        <item>Ти си в безопасност и обичан. Почивай си сега, малко дете.</item>
+        <item>Звездите те пазят. Сладки сънища.</item>
+        <item>Спи добре. Ако имаш нужда от нещо, просто повикай и ние ще бъдем там.</item>
+        <item>Всичко е тихо и спокойно. Заспивай сега.</item>
+        <item>Ти си на сигурно място. Лека нощ.</item>
+    </string-array>
 </resources>

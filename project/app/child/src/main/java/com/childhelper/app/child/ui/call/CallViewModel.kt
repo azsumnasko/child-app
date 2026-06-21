@@ -6,6 +6,7 @@ import android.os.Looper
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.childhelper.app.child.ui.bedtime.VoicePromptManager
+import com.childhelper.app.child.R
 import com.childhelper.core.common.model.CallSession
 import com.childhelper.core.common.model.Contact
 import com.childhelper.core.common.model.ContactRole
@@ -72,20 +73,25 @@ class CallViewModel @Inject constructor(
 
     fun startCall(contactId: String, hasVideo: Boolean, contactName: String = "") {
         viewModelScope.launch {
-            val displayName = contactName.ifBlank { getContactName(contactId) }
-            _uiState.update {
-                it.copy(
-                    contactName = displayName,
-                    contactId = contactId,
-                    hasVideo = hasVideo,
-                    status = CallStatusUi.CONNECTING
-                )
+            try {
+                val displayName = contactName.ifBlank { getContactName(contactId) }
+                _uiState.update {
+                    it.copy(
+                        contactName = displayName,
+                        contactId = contactId,
+                        hasVideo = hasVideo,
+                        status = CallStatusUi.CONNECTING
+                    )
+                }
+
+                voicePromptManager.speakCallStatus(getApplication<Application>().getString(R.string.call_voice_calling, displayName))
+
+                callManager.initializeWebRtc()
+                callManager.initiateCall(contactId, hasVideo)
+            } catch (e: Exception) {
+                _uiState.update { it.copy(status = CallStatusUi.ERROR, errorMessage = e.message) }
+                voicePromptManager.speakCallStatus(getApplication<Application>().getString(R.string.call_voice_error, "Call failed"))
             }
-
-            voicePromptManager.speakCallStatus("Calling $displayName")
-
-            callManager.initializeWebRtc()
-            callManager.initiateCall(contactId, hasVideo)
         }
     }
 
@@ -94,7 +100,7 @@ class CallViewModel @Inject constructor(
     }
 
     fun endCall() {
-        voicePromptManager.speakCallStatus("Ending call")
+        voicePromptManager.speakCallStatus(getApplication<Application>().getString(R.string.call_voice_ending))
         callManager.endCall()
         stopCallTimer()
         _navigationEvent.value = CallNavigationEvent.NavigateBack
@@ -105,9 +111,9 @@ class CallViewModel @Inject constructor(
         callManager.toggleMute(newMuted)
         _uiState.update { it.copy(isMuted = newMuted) }
         if (newMuted) {
-            voicePromptManager.speak("Microphone off")
+            voicePromptManager.speak(getApplication<Application>().getString(R.string.call_voice_microphone_off))
         } else {
-            voicePromptManager.speak("Microphone on")
+            voicePromptManager.speak(getApplication<Application>().getString(R.string.call_voice_microphone_on))
         }
     }
 
@@ -141,12 +147,12 @@ class CallViewModel @Inject constructor(
             is CallState.Connected -> {
                 _uiState.update { it.copy(status = CallStatusUi.CONNECTED) }
                 startCallTimer()
-                voicePromptManager.speakCallStatus("Call connected")
+                voicePromptManager.speakCallStatus(getApplication<Application>().getString(R.string.call_voice_connected))
             }
             is CallState.Ended -> {
                 _uiState.update { it.copy(status = CallStatusUi.ENDED) }
                 stopCallTimer()
-                voicePromptManager.speakCallStatus("Call ended")
+                voicePromptManager.speakCallStatus(getApplication<Application>().getString(R.string.call_voice_ended))
                 _navigationEvent.value = CallNavigationEvent.NavigateBack
             }
             is CallState.Error -> {
@@ -156,8 +162,12 @@ class CallViewModel @Inject constructor(
                         errorMessage = state.message
                     )
                 }
-                voicePromptManager.speakCallStatus("Call error: ${state.message}")
+                voicePromptManager.speakCallStatus(getApplication<Application>().getString(R.string.call_voice_error, state.message))
                 stopCallTimer()
+                viewModelScope.launch {
+                    delay(3000)
+                    _navigationEvent.value = CallNavigationEvent.NavigateBack
+                }
             }
             CallState.Idle -> {
                 // No-op

@@ -31,6 +31,9 @@
     <string name="contact_mom_description">Call Mom</string>
     <string name="contact_dad_description">Call Dad</string>
     <string name="contact_guardian_description">Call Guardian</string>
+    <string name="contact_mom_label">Mom</string>
+    <string name="contact_dad_label">Dad</string>
+    <string name="contact_call_description">Call %s. Tap to call.</string>
 
     <!-- SOS Screen -->
     <string name="sos_title">SOS</string>
@@ -124,6 +127,7 @@
     <string name="pairing_error_title">Oops!</string>
     <string name="pairing_try_again">Try Again</string>
     <string name="pairing_button">Pair</string>
+    <string name="pair_with_parent_description">Pair this device with a parent device.</string>
     <string name="pairing_nearby_p2p_button">Nearby P2P Pairing</string>
     <string name="pairing_nearby_p2p_content_desc">Start nearby P2P pairing</string>
     <string name="pairing_qr_image_desc">Pairing QR code</string>
@@ -141,4 +145,24 @@
     <string name="pairing_qr_error_content">QR code generation failed</string>
     <string name="pairing_qr_error_label">QR Error</string>
     <string name="pairing_device_label">Device: %s</string>
+
+    <!-- Battery Whitelist Dialog -->
+    <string name="battery_whitelist_title">Keep ChildHelper Running</string>
+    <string name="battery_whitelist_body">To keep your child safe, ChildHelper must run continuously in the background. Your device (%s) may stop the app to save battery.</string>
+    <string name="battery_whitelist_follow_steps">Follow these steps:</string>
+    <string name="battery_whitelist_also_tap">Also tap \'Allow Background\' below to request system permission.</string>
+    <string name="battery_whitelist_allow_background">Allow Background Running</string>
+    <string name="battery_whitelist_open_settings">Open %s Settings</string>
+    <string name="battery_whitelist_later">I\'ll do this later</string>
+
+    <!-- Bedtime Messages (string-array) -->
+    <string-array name="bedtime_messages">
+        <item>Good night. Sleep tight. Mom and Dad are watching over you.</item>
+        <item>Everything is safe. Close your eyes and dream happy dreams.</item>
+        <item>You are safe and loved. Rest now, little one.</item>
+        <item>The stars are watching over you. Sweet dreams.</item>
+        <item>Sleep well. If you need anything, just call and we will be there.</item>
+        <item>All is quiet and calm. Drift off to sleep now.</item>
+        <item>You are in your safe place. Good night.</item>
+    </string-array>
 </resources>

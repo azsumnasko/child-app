@@ -99,6 +99,8 @@ class MonitoringCoordinator(
     val isThermalShutdown: Boolean get() = _isThermalShutdown.get()
 
     private var thermalJob: Job? = null
+    private var cryEventJob: Job? = null
+    private var motionEventJob: Job? = null
 
     companion object {
         private const val TAG = "MonitoringCoordinator"
@@ -120,8 +122,8 @@ class MonitoringCoordinator(
         lifecycleOwner: LifecycleOwner,
         thermalMonitor: ThermalMonitor? = null
     ) {
-        if (monitoringState.value is MonitoringState.Active) {
-            Log.w(TAG, "Monitoring already active; ignoring start request")
+        if (monitoringState.value !is MonitoringState.Idle) {
+            Log.w(TAG, "Monitoring already active (${monitoringState.value}); ignoring start request")
             return
         }
 
@@ -149,6 +151,20 @@ class MonitoringCoordinator(
             }
         }
 
+        // Cancel stale event-forwarding jobs before creating new ones
+        cryEventJob?.cancel()
+        cryEventJob = null
+        motionEventJob?.cancel()
+        motionEventJob = null
+
+        // Forward detection events to the alert pipeline
+        cryEventJob = scope.launch {
+            cryDetector.cryEvents.collect { eventPipeline.submitCryEvent(it) }
+        }
+        motionEventJob = scope.launch {
+            motionDetector.motionEvents.collect { eventPipeline.submitMotionEvent(it) }
+        }
+
         // Publish the state change AFTER detectors are started
         _monitoringState.value = MonitoringState.Active(config)
         Log.i(TAG, "Monitoring state → Active")
@@ -170,6 +186,12 @@ class MonitoringCoordinator(
         // Cancel thermal observation first so it doesn't restart detectors
         thermalJob?.cancel()
         thermalJob = null
+
+        // Cancel event-forwarding jobs
+        cryEventJob?.cancel()
+        cryEventJob = null
+        motionEventJob?.cancel()
+        motionEventJob = null
 
         // Stop all detectors unconditionally
         cryDetector.stopDetection()

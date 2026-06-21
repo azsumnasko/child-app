@@ -36,6 +36,9 @@ dependencies {
     // Coroutines
     implementation(libs.coroutines.core)
 
+    // SQLite for persistent store
+    implementation("org.xerial:sqlite-jdbc:3.44.1.0")
+
     // OkHttp for FCM HTTP calls
     implementation(libs.okhttp)
 

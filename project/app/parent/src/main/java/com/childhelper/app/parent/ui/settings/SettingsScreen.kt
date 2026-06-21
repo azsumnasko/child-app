@@ -48,6 +48,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -87,10 +88,22 @@ fun SettingsScreen(
     val uiState by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Recreate activity after language change
+    val context = LocalContext.current
+    val languageChanged by viewModel.languageChanged.collectAsState()
+    LaunchedEffect(languageChanged) {
+        if (languageChanged) {
+            val activity = context as? android.app.Activity
+            activity?.recreate()
+            viewModel.onLanguageChangedHandled()
+        }
+    }
+
     // Show data deleted confirmation
+    val dataDeletedMessage = stringResource(R.string.settings_data_deleted)
     LaunchedEffect(uiState.dataDeleted) {
         if (uiState.dataDeleted) {
-            snackbarHostState.showSnackbar("All data has been securely deleted")
+            snackbarHostState.showSnackbar(dataDeletedMessage)
             viewModel.resetDataDeletedFlag()
         }
     }
@@ -125,7 +138,7 @@ fun SettingsScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Navigate back"
+                            contentDescription = stringResource(R.string.navigate_back_description)
                         )
                     }
                 },
@@ -149,7 +162,7 @@ fun SettingsScreen(
             // Detection Settings Section
             SettingsSection(
                 icon = Icons.Default.Sensors,
-                title = "Detection Settings"
+                title = stringResource(R.string.settings_section_detection)
             ) {
                 // Sensitivity slider
                 SensitivitySelector(
@@ -161,16 +174,16 @@ fun SettingsScreen(
 
                 // Cry detection toggle
                 SettingsToggleItem(
-                    label = "Cry Detection",
-                    description = "Detect crying sounds from the child's room",
+                    label = stringResource(R.string.settings_cry_detection),
+                    description = stringResource(R.string.settings_cry_detection_desc),
                     checked = uiState.cryDetectionEnabled,
                     onCheckedChange = { viewModel.setCryDetectionEnabled(it) }
                 )
 
                 // Motion detection toggle
                 SettingsToggleItem(
-                    label = "Motion Detection",
-                    description = "Detect motion in the child's room",
+                    label = stringResource(R.string.settings_motion_detection),
+                    description = stringResource(R.string.settings_motion_detection_desc),
                     checked = uiState.motionDetectionEnabled,
                     onCheckedChange = { viewModel.setMotionDetectionEnabled(it) }
                 )
@@ -179,7 +192,7 @@ fun SettingsScreen(
             // Alert History Section
             SettingsSection(
                 icon = Icons.Default.Notifications,
-                title = "Alert History"
+                title = stringResource(R.string.settings_section_alert_history)
             ) {
                 RetentionSelector(
                     currentRetention = uiState.alertHistoryRetention,
@@ -190,7 +203,7 @@ fun SettingsScreen(
             // SOS Escalation Section
             SettingsSection(
                 icon = Icons.Default.Security,
-                title = "SOS Escalation"
+                title = stringResource(R.string.settings_section_sos)
             ) {
                 SosEscalationOrder(
                     escalationOrder = uiState.sosEscalationOrder,
@@ -200,8 +213,8 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 SettingsToggleItem(
-                    label = "Bedtime Auto-Answer",
-                    description = "Automatically answer calls during bedtime mode",
+                    label = stringResource(R.string.settings_bedtime_auto_answer),
+                    description = stringResource(R.string.settings_bedtime_auto_answer_desc),
                     checked = uiState.bedtimeAutoAnswer,
                     onCheckedChange = { viewModel.setBedtimeAutoAnswer(it) }
                 )
@@ -210,7 +223,7 @@ fun SettingsScreen(
             // General Section
             SettingsSection(
                 icon = Icons.Default.Settings,
-                title = "General"
+                title = stringResource(R.string.settings_section_general)
             ) {
                 LanguageSelector(
                     selectedLanguage = uiState.selectedLanguage,
@@ -220,15 +233,15 @@ fun SettingsScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 SettingsToggleItem(
-                    label = "Push Notifications",
-                    description = "Receive alerts as push notifications",
+                    label = stringResource(R.string.settings_push_notifications),
+                    description = stringResource(R.string.settings_push_notifications_desc),
                     checked = uiState.pushNotificationsEnabled,
                     onCheckedChange = { viewModel.setPushNotificationsEnabled(it) }
                 )
 
                 SettingsToggleItem(
-                    label = "Location Sharing",
-                    description = "Share location during SOS events",
+                    label = stringResource(R.string.settings_location_sharing),
+                    description = stringResource(R.string.settings_location_sharing_desc),
                     checked = uiState.locationSharingEnabled,
                     onCheckedChange = { viewModel.setLocationSharingEnabled(it) }
                 )
@@ -256,7 +269,7 @@ fun SettingsScreen(
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
-                            text = "Danger Zone",
+                            text = stringResource(R.string.settings_danger_zone),
                             style = MaterialTheme.typography.titleSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.error
@@ -264,7 +277,7 @@ fun SettingsScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Deleting your data will permanently remove all alert history and reset all settings. This action cannot be undone.",
+                        text = stringResource(R.string.settings_danger_zone_desc),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer
                     )
@@ -276,7 +289,7 @@ fun SettingsScreen(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Delete All Data")
+                        Text(stringResource(R.string.settings_delete_all_data))
                     }
                 }
             }
@@ -338,13 +351,13 @@ private fun SensitivitySelector(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "Detection Sensitivity",
+            text = stringResource(R.string.settings_sensitivity),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Higher sensitivity may increase false positives",
+            text = stringResource(R.string.settings_sensitivity_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -356,9 +369,9 @@ private fun SensitivitySelector(
         ) {
             SensitivityLevel.values().forEach { level ->
                 val (label, description) = when (level) {
-                    SensitivityLevel.LOW -> "Low" to "Fewer alerts"
-                    SensitivityLevel.NORMAL -> "Normal" to "Balanced"
-                    SensitivityLevel.HIGH -> "High" to "More alerts"
+                    SensitivityLevel.LOW -> stringResource(R.string.settings_sensitivity_low) to stringResource(R.string.settings_sensitivity_low_desc)
+                    SensitivityLevel.NORMAL -> stringResource(R.string.settings_sensitivity_normal) to stringResource(R.string.settings_sensitivity_normal_desc)
+                    SensitivityLevel.HIGH -> stringResource(R.string.settings_sensitivity_high) to stringResource(R.string.settings_sensitivity_high_desc)
                 }
                 val selected = currentSensitivity == level
                 Column(
@@ -402,13 +415,13 @@ private fun RetentionSelector(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "Alert History Retention",
+            text = stringResource(R.string.settings_retention),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "How long to keep alert history on this device",
+            text = stringResource(R.string.settings_retention_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -416,9 +429,9 @@ private fun RetentionSelector(
 
         RetentionPeriod.values().forEach { period ->
             val (label, description) = when (period) {
-                RetentionPeriod.OFF -> "Keep All" to "Store alerts indefinitely (max 30 days)"
-                RetentionPeriod.TWENTY_FOUR_HOURS -> "24 Hours" to "Keep last 24 hours of alerts"
-                RetentionPeriod.SEVEN_DAYS -> "7 Days" to "Keep last 7 days of alerts"
+                RetentionPeriod.OFF -> stringResource(R.string.settings_retention_keep_all) to stringResource(R.string.settings_retention_keep_all_desc)
+                RetentionPeriod.TWENTY_FOUR_HOURS -> stringResource(R.string.settings_retention_24h) to stringResource(R.string.settings_retention_24h_desc)
+                RetentionPeriod.SEVEN_DAYS -> stringResource(R.string.settings_retention_7d) to stringResource(R.string.settings_retention_7d_desc)
             }
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -457,13 +470,13 @@ private fun SosEscalationOrder(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "SOS Contact Order",
+            text = stringResource(R.string.settings_sos_order),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Who to contact first when SOS is activated",
+            text = stringResource(R.string.settings_sos_order_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -471,7 +484,7 @@ private fun SosEscalationOrder(
 
         if (escalationOrder.isEmpty()) {
             Text(
-                text = "No contacts configured",
+                text = stringResource(R.string.settings_sos_no_contacts),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 8.dp)
@@ -568,23 +581,23 @@ private fun DataDeletionConfirmationDialog(
             )
         },
         title = {
-            Text(text = "Delete All Data?")
+            Text(text = stringResource(R.string.settings_delete_confirm_title))
         },
         text = {
             Column {
                 Text(
-                    text = "This will permanently delete:",
+                    text = stringResource(R.string.settings_delete_confirm_body),
                     style = MaterialTheme.typography.bodyMedium
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Column(modifier = Modifier.padding(start = 8.dp)) {
-                    Text("\u2022 All alert history")
-                    Text("\u2022 All settings and preferences")
-                    Text("\u2022 Cached data")
+                    Text(stringResource(R.string.settings_delete_item_alerts))
+                    Text(stringResource(R.string.settings_delete_item_settings))
+                    Text(stringResource(R.string.settings_delete_item_cache))
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = "This action cannot be undone.",
+                    text = stringResource(R.string.settings_delete_warning),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.error
@@ -598,7 +611,7 @@ private fun DataDeletionConfirmationDialog(
                     containerColor = MaterialTheme.colorScheme.error
                 )
             ) {
-                Text("Delete Everything")
+                Text(stringResource(R.string.settings_delete_confirm_button))
             }
         },
         dismissButton = {
@@ -617,22 +630,22 @@ private fun LanguageSelector(
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "App Language",
+            text = stringResource(R.string.settings_language),
             style = MaterialTheme.typography.bodyMedium,
             fontWeight = FontWeight.Medium
         )
         Spacer(modifier = Modifier.height(4.dp))
         Text(
-            text = "Restart required for change to take effect",
+            text = stringResource(R.string.settings_language_desc),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(8.dp))
 
         val options = listOf(
-            null to "System Default",
-            "en" to "English",
-            "bg" to "Bulgarian"
+            null to stringResource(R.string.settings_language_system),
+            "en" to stringResource(R.string.settings_language_english),
+            "bg" to stringResource(R.string.settings_language_bulgarian)
         )
 
         options.forEach { (code, label) ->

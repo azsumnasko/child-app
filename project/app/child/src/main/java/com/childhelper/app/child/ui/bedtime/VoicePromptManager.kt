@@ -4,6 +4,7 @@ import android.content.Context
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
+import com.childhelper.app.child.R
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -148,7 +149,8 @@ class VoicePromptManager(
      * Pre-defined calming bedtime messages for children.
      */
     fun getRandomBedtimeMessage(): String {
-        return BEDTIME_MESSAGES.random()
+        val messages = context.resources.getStringArray(R.array.bedtime_messages)
+        return messages.random()
     }
 
     /**
@@ -165,15 +167,5 @@ class VoicePromptManager(
 
     companion object {
         private const val TAG = "VoicePromptManager"
-
-        private val BEDTIME_MESSAGES = listOf(
-            "Good night. Sleep tight. Mom and Dad are watching over you.",
-            "Everything is safe. Close your eyes and dream happy dreams.",
-            "You are safe and loved. Rest now, little one.",
-            "The stars are watching over you. Sweet dreams.",
-            "Sleep well. If you need anything, just call and we will be there.",
-            "All is quiet and calm. Drift off to sleep now.",
-            "You are in your safe place. Good night."
-        )
     }
 }

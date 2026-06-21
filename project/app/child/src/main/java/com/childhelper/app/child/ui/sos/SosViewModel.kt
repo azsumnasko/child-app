@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
 
 /**
@@ -33,6 +34,7 @@ class SosViewModel @Inject constructor(
     val navigationEvent: StateFlow<SosNavigationEvent?> = _navigationEvent.asStateFlow()
 
     private val jobs = mutableListOf<Job>()
+    private var countdownJob: Job? = null
 
     init {
         voicePromptManager.initialize {
@@ -58,10 +60,13 @@ class SosViewModel @Inject constructor(
     }
 
     fun onSosConfirmed(childDeviceId: String) {
-        viewModelScope.launch {
+        val deviceId = if (childDeviceId == "child_device") {
+            runBlocking { securePreferences.getString("device_id", "child_device") } ?: "child_device"
+        } else childDeviceId
+        countdownJob?.cancel()
+        countdownJob = viewModelScope.launch {
             _uiState.update { it.copy(isActive = true, countdown = 3) }
 
-            // Countdown with voice prompts
             for (i in 3 downTo 1) {
                 _uiState.update { it.copy(countdown = i) }
                 voicePromptManager.speak(i.toString())
@@ -79,6 +84,8 @@ class SosViewModel @Inject constructor(
     }
 
     fun onCancelSos() {
+        countdownJob?.cancel()
+        countdownJob = null
         sosManager.cancelSos()
         voicePromptManager.speak("SOS cancelled.")
         _navigationEvent.value = SosNavigationEvent.NavigateBack

@@ -4,6 +4,7 @@ import com.childhelper.server.routes.notificationRoutes
 import com.childhelper.server.routes.pairingRoutes
 import com.childhelper.server.routes.signalingRoutes
 import com.childhelper.server.routes.turnRoutes
+import com.childhelper.server.store.AlertStore
 import com.childhelper.server.store.MessageStore
 import com.childhelper.server.store.PairingStore
 import com.childhelper.server.fcm.FcmDispatcher
@@ -21,6 +22,7 @@ import kotlinx.serialization.json.Json
 fun main() {
     val pairingStore = PairingStore()
     val messageStore = MessageStore()
+    val alertStore = AlertStore()
     val fcmDispatcher = FcmDispatcher()
 
     embeddedServer(Netty, port = System.getenv("PORT")?.toIntOrNull() ?: 8080, host = "0.0.0.0") {
@@ -52,8 +54,8 @@ fun main() {
         }
 
         pairingRoutes(pairingStore)
-        signalingRoutes(messageStore, pairingStore)
-        notificationRoutes(fcmDispatcher, pairingStore)
+        signalingRoutes(messageStore, pairingStore, fcmDispatcher)
+        notificationRoutes(fcmDispatcher, pairingStore, alertStore)
         turnRoutes()
     }.start(wait = true)
 }

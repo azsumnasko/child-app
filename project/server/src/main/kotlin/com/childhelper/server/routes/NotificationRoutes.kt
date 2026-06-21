@@ -1,5 +1,6 @@
 package com.childhelper.server.routes
 
+import com.childhelper.server.store.AlertStore
 import com.childhelper.server.store.PairingStore
 import com.childhelper.server.fcm.FcmDispatcher
 import io.ktor.http.*
@@ -9,7 +10,7 @@ import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import kotlinx.serialization.json.*
 
-fun Application.notificationRoutes(fcm: FcmDispatcher, pairingStore: PairingStore) {
+fun Application.notificationRoutes(fcm: FcmDispatcher, pairingStore: PairingStore, alertStore: AlertStore) {
     routing {
         post("/api/v1/notify/{childDeviceId}") {
             val childDeviceId = call.parameters["childDeviceId"] ?: return@post call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Missing childDeviceId"))
@@ -19,11 +20,11 @@ fun Application.notificationRoutes(fcm: FcmDispatcher, pairingStore: PairingStor
             val payload = call.receive<JsonObject>()
             val alertId = payload["alertId"]?.jsonPrimitive?.content ?: "unknown"
             val eventType = payload["eventType"]?.jsonPrimitive?.content ?: "UNKNOWN"
-            val timestamp = payload["timestamp"]?.jsonPrimitive?.long ?: System.currentTimeMillis()
+            val timestamp = payload["timestamp"]?.jsonPrimitive?.content?.toLongOrNull() ?: System.currentTimeMillis()
             val priority = payload["priority"]?.jsonPrimitive?.content ?: "normal"
-            val confidence = payload["confidence"]?.jsonPrimitive?.float
-            val batteryPercent = payload["batteryPercent"]?.jsonPrimitive?.int ?: -1
-            val isCharging = payload["isCharging"]?.jsonPrimitive?.boolean ?: false
+            val confidence = payload["confidence"]?.jsonPrimitive?.content?.toFloatOrNull()
+            val batteryPercent = payload["batteryPercent"]?.jsonPrimitive?.content?.toIntOrNull() ?: -1
+            val isCharging = payload["isCharging"]?.jsonPrimitive?.content?.toBooleanStrictOrNull() ?: false
             val networkType = payload["networkType"]?.jsonPrimitive?.content ?: "unknown"
             val monitorMode = payload["monitorMode"]?.jsonPrimitive?.content ?: "IDLE"
 
@@ -35,7 +36,16 @@ fun Application.notificationRoutes(fcm: FcmDispatcher, pairingStore: PairingStor
                 networkType = networkType, monitorMode = monitorMode
             )
             if (success) call.respond(HttpStatusCode.OK, mapOf("status" to "delivered"))
-            else call.respond(HttpStatusCode.Accepted, mapOf("status" to "accepted", "fcm" to "not_configured"))
+            else {
+                alertStore.store(parentDeviceId, childDeviceId, payload)
+                call.respond(HttpStatusCode.Accepted, mapOf("status" to "accepted", "fcm" to "not_configured"))
+            }
+        }
+
+        get("/api/v1/notify/pending/{parentDeviceId}") {
+            val parentDeviceId = call.parameters["parentDeviceId"] ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Missing parentDeviceId"))
+            val alerts = alertStore.dequeueAll(parentDeviceId)
+            call.respond(HttpStatusCode.OK, alerts)
         }
 
         post("/api/v1/register-token") {

@@ -144,7 +144,9 @@ fun ChildPairingScreen(
                 PairingState.ERROR -> {
                     ErrorContent(
                         message = errorMessage ?: stringResource(R.string.pairing_error_default),
-                        onRetry = { viewModel.startPairing() },
+                        onRetry = {
+                            if (isP2p) viewModel.startP2pPairing() else viewModel.startPairing()
+                        },
                         onCancel = {
                             viewModel.resetState()
                             navController.popBackStack()

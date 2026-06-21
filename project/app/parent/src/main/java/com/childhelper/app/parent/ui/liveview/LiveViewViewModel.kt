@@ -2,17 +2,20 @@ package com.childhelper.app.parent.ui.liveview
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.childhelper.core.security.SecurePreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeout
+import org.webrtc.EglBase
 import org.webrtc.PeerConnection
+import org.webrtc.VideoTrack
 import javax.inject.Inject
 
 /**
@@ -70,7 +73,9 @@ data class LiveViewUiState(
  */
 @HiltViewModel
 class LiveViewViewModel @Inject constructor(
-    private val talkBackManager: TalkBackManager
+    private val connectionManager: LiveViewConnectionManager,
+    private val talkBackManager: TalkBackManager,
+    private val securePreferences: SecurePreferences
 ) : ViewModel() {
 
     private val _connectionState = MutableStateFlow(LiveConnectionState.IDLE)
@@ -82,6 +87,24 @@ class LiveViewViewModel @Inject constructor(
     private val _connectionDurationMs = MutableStateFlow(0L)
     private val _errorMessage = MutableStateFlow<String?>(null)
     private val _showConnectionDialog = MutableStateFlow(false)
+
+    val remoteVideoTrack: StateFlow<VideoTrack?>
+        get() = connectionManager.remoteVideoTrack
+
+    val remoteEglBase: EglBase?
+        get() = connectionManager.currentEglBase
+
+    init {
+        viewModelScope.launch {
+            connectionManager.connectionState.collect { state ->
+                _connectionState.value = state
+                if (state == LiveConnectionState.CONNECTED) {
+                    startDurationTimer()
+                    _showConnectionDialog.value = false
+                }
+            }
+        }
+    }
 
     val uiState: StateFlow<LiveViewUiState> = combine(
         _connectionState,
@@ -197,17 +220,50 @@ class LiveViewViewModel @Inject constructor(
     // --- Connection lifecycle ---
 
     fun startConnection() {
+        if (_connectionState.value == LiveConnectionState.CONNECTING ||
+            _connectionState.value == LiveConnectionState.SIGNALING ||
+            _connectionState.value == LiveConnectionState.CONNECTED) {
+            return // Already connecting or connected
+        }
         _connectionState.value = LiveConnectionState.CONNECTING
         _showConnectionDialog.value = true
         _connectionDurationMs.value = 0L
         viewModelScope.launch {
-            // Simulate connection delay — in production, this triggers WebRTC setup
-            delay(2000)
+            val childDeviceId = securePreferences.getString("paired_child_device_id", "") ?: ""
+            if (childDeviceId.isBlank()) {
+                _connectionState.value = LiveConnectionState.FAILED
+                _errorMessage.value = "No paired child device found"
+                return@launch
+            }
+
+            try {
+                withTimeout(30_000) {
+                    val result = connectionManager.connect(childDeviceId)
+                    if (result.isFailure) {
+                        _connectionState.value = LiveConnectionState.FAILED
+                        _errorMessage.value = result.exceptionOrNull()?.message
+                        return@withTimeout
+                    }
+
+                    connectionManager.currentPeerConnection?.let { pc ->
+                        talkBackManager.initialize(pc, connectionManager.currentDataChannel)
+                    }
+                }
+            } catch (e: kotlinx.coroutines.TimeoutCancellationException) {
+                _connectionState.value = LiveConnectionState.FAILED
+                _errorMessage.value = "Connection timed out"
+                connectionManager.disconnect()
+            } catch (e: Exception) {
+                _connectionState.value = LiveConnectionState.FAILED
+                _errorMessage.value = e.message
+                connectionManager.disconnect()
+            }
         }
     }
 
     fun disconnect() {
         talkBackManager.setTalkBackEnabled(false)
+        connectionManager.disconnect()
         _connectionState.value = LiveConnectionState.CLOSED
         _connectionDurationMs.value = 0L
         durationJob?.cancel()
@@ -246,5 +302,6 @@ class LiveViewViewModel @Inject constructor(
         super.onCleared()
         durationJob?.cancel()
         talkBackManager.release()
+        connectionManager.disconnect()
     }
 }

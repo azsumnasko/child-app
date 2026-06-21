@@ -2,6 +2,7 @@ package com.childhelper.server.routes
 
 import com.childhelper.core.common.signaling.SdpMessage
 import com.childhelper.core.common.signaling.IceMessage
+import com.childhelper.server.fcm.FcmDispatcher
 import com.childhelper.server.store.MessageStore
 import com.childhelper.server.store.PairingStore
 import io.ktor.http.*
@@ -10,7 +11,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
-fun Application.signalingRoutes(messageStore: MessageStore, pairingStore: PairingStore) {
+fun Application.signalingRoutes(messageStore: MessageStore, pairingStore: PairingStore, fcmDispatcher: FcmDispatcher) {
     routing {
         route("/api/v1/signal") {
             post("/offer") {
@@ -19,6 +20,7 @@ fun Application.signalingRoutes(messageStore: MessageStore, pairingStore: Pairin
                     return@post call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Devices are not paired"))
                 }
                 messageStore.enqueue(offer.toDeviceId, offer)
+                fcmDispatcher.sendSignalPoll(offer.toDeviceId)
                 call.respond(HttpStatusCode.OK, mapOf("status" to "ok"))
             }
             post("/answer") {
@@ -27,6 +29,7 @@ fun Application.signalingRoutes(messageStore: MessageStore, pairingStore: Pairin
                     return@post call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Devices are not paired"))
                 }
                 messageStore.enqueue(answer.toDeviceId, answer)
+                fcmDispatcher.sendSignalPoll(answer.toDeviceId)
                 call.respond(HttpStatusCode.OK, mapOf("status" to "ok"))
             }
             post("/ice") {
@@ -35,6 +38,7 @@ fun Application.signalingRoutes(messageStore: MessageStore, pairingStore: Pairin
                     return@post call.respond(HttpStatusCode.Forbidden, mapOf("error" to "Devices are not paired"))
                 }
                 messageStore.enqueue(candidate.toDeviceId, candidate)
+                fcmDispatcher.sendSignalPoll(candidate.toDeviceId)
                 call.respond(HttpStatusCode.OK, mapOf("status" to "ok"))
             }
             get("/pending/{deviceId}") {
