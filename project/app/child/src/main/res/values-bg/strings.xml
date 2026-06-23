@@ -34,11 +34,16 @@
     <string name="contact_guardian_description">Обадете се на Настойник</string>
     <string name="contact_mom_label">Мама</string>
     <string name="contact_dad_label">Тате</string>
+    <string name="contact_guardian_role_label">Настойник</string>
     <string name="contact_call_description">Обаждане на %s. Докоснете, за да се обадите.</string>
 
     <!-- SOS Screen -->
     <string name="sos_title">SOS</string>
     <string name="sos_activated">SOS сигналът е изпратен</string>
+    <string name="sos_alert_sending">Сигналът се изпраща на вашите спешни контакти</string>
+    <string name="sos_help_coming">Помощта идва</string>
+    <string name="sos_guardians_notified_body">Вашите настойници са уведомени. Запазете спокойствие и ги изчакайте.</string>
+    <string name="sos_guardians_notified_cd">Настойниците са уведомени. Помощта идва.</string>
     <string name="sos_countdown_format">SOS след %d...</string>
     <string name="sos_voice_prompt">Изпратен е сигнал за помощ. Запазете спокойствие.</string>
     <string name="sos_countdown_voice">%d</string>
@@ -88,6 +93,7 @@
     <string name="bedtime_auto_answer_subtitle">Отговаряйте автоматично на обаждания от Мама/Татко</string>
     <string name="bedtime_auto_answer_on_voice">На обажданията ще се отговаря автоматично.</string>
     <string name="bedtime_auto_answer_off_voice">Автоматичното отговаряне е изключено.</string>
+    <string name="bedtime_incoming_call_voice">Входящо обаждане от %s. Автоматично отговаряне.</string>
     <string name="bedtime_monitoring_active">Наблюдението за плач и движение е активно по време на сън.</string>
     <string name="bedtime_monitoring_inactive">Наблюдението ще започне автоматично, когато заспите.</string>
     <string name="bedtime_listening_active">Вслушваме се</string>
@@ -104,6 +110,8 @@
     <string name="cry_detected">Открит плач</string>
     <string name="motion_detected">Открито движение</string>
     <string name="camera_obstructed">Камерата е закрита</string>
+    <string name="detection_camera_blocked">Камерата е закрита</string>
+    <string name="detection_camera_blocked_desc">Моля, уверете се, че камерата не е покрита</string>
 
     <!-- Generic -->
     <string name="voice_calling_mom">Обаждане на Мама</string>

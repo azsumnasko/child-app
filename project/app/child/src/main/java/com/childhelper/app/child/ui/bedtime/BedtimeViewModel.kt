@@ -5,7 +5,9 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.viewModelScope
 import com.childhelper.app.child.service.MonitoringCoordinator
+import com.childhelper.app.child.R
 import com.childhelper.app.child.ui.call.CallManager
+import com.childhelper.app.child.ui.call.CallState
 import com.childhelper.core.common.model.DetectionConfig
 import com.childhelper.core.common.model.SensitivityLevel
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -41,6 +43,7 @@ class BedtimeViewModel @Inject constructor(
 
     private var bedtimeMessageJob: Job? = null
     private var voiceMessageIndex = 0
+    private var bedtimeStartedMonitoring = false
 
     private val jobs = mutableListOf<Job>()
 
@@ -55,7 +58,9 @@ class BedtimeViewModel @Inject constructor(
                 if (state is CallState.Incoming && _uiState.value.autoAnswerEnabled) {
                     // Auto-answer after a short delay to let the child know
                     delay(2000)
-                    voicePromptManager.speakCallStatus("Incoming call from ${state.callerName}. Answering automatically.")
+                    voicePromptManager.speakCallStatus(
+                        getApplication<Application>().getString(R.string.bedtime_incoming_call_voice, state.callerName)
+                    )
                     callManager.acceptCall(state.sessionId)
                 }
             }
@@ -74,7 +79,7 @@ class BedtimeViewModel @Inject constructor(
 
         // Welcome message
         voicePromptManager.speakBedtimeMessage(
-            "Bedtime mode is on. Sleep well. I am watching over you."
+            getApplication<Application>().getString(R.string.bedtime_welcome_voice)
         )
 
         // Start cry and motion detection at high sensitivity via the coordinator
@@ -88,6 +93,7 @@ class BedtimeViewModel @Inject constructor(
         )
 
         monitoringCoordinator.startMonitoring(bedtimeConfig, lifecycleOwner)
+        bedtimeStartedMonitoring = true
 
         // Start periodic calming messages
         startCalmingMessages()
@@ -100,9 +106,10 @@ class BedtimeViewModel @Inject constructor(
         _uiState.update { it.copy(isActive = false, isExiting = true) }
 
         bedtimeMessageJob?.cancel()
-        voicePromptManager.speak("Good morning. Bedtime mode is off.")
+        voicePromptManager.speak(getApplication<Application>().getString(R.string.bedtime_good_morning_voice))
 
         monitoringCoordinator.stopMonitoring()
+        bedtimeStartedMonitoring = false
 
         viewModelScope.launch {
             delay(2000)
@@ -124,9 +131,9 @@ class BedtimeViewModel @Inject constructor(
     fun toggleAutoAnswer(enabled: Boolean) {
         _uiState.update { it.copy(autoAnswerEnabled = enabled) }
         if (enabled) {
-            voicePromptManager.speak("Auto answer is on. Calls will be answered automatically.")
+            voicePromptManager.speak(getApplication<Application>().getString(R.string.bedtime_auto_answer_on_voice))
         } else {
-            voicePromptManager.speak("Auto answer is off.")
+            voicePromptManager.speak(getApplication<Application>().getString(R.string.bedtime_auto_answer_off_voice))
         }
     }
 
@@ -160,7 +167,10 @@ class BedtimeViewModel @Inject constructor(
     override fun onCleared() {
         jobs.forEach { it.cancel() }
         bedtimeMessageJob?.cancel()
-        monitoringCoordinator.stopMonitoring()
+        if (bedtimeStartedMonitoring) {
+            monitoringCoordinator.stopMonitoring()
+            bedtimeStartedMonitoring = false
+        }
         super.onCleared()
     }
 }
@@ -177,14 +187,3 @@ data class BedtimeUiState(
     val nextMessageInMinutes: Int = 3,
     val totalSleepTimeMinutes: Int = 0
 )
-
-/**
- * Call state sealed class for auto-answer monitoring.
- * Mirrors the CallManager state but simplified for the ViewModel.
- */
-sealed class CallState {
-    data object Idle : CallState()
-    data class Incoming(val sessionId: String, val callerName: String) : CallState()
-    data class Connected(val sessionId: String) : CallState()
-    data object Ended : CallState()
-}

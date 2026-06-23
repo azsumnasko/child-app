@@ -5,7 +5,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 
 private val ChildLightColorScheme = lightColorScheme(
     primary = ChildColors.Primary,
@@ -26,7 +29,7 @@ private val ChildLightColorScheme = lightColorScheme(
     onSurface = ChildColors.TextPrimaryLight,
     surfaceVariant = Color(0xFFEEF1F4),
     onSurfaceVariant = ChildColors.TextSecondaryLight,
-    error = Color(0xFFD9534F),
+    error = Color(0xFFC0392B),
     onError = Color.White,
     errorContainer = Color(0xFFFADBD8),
     onErrorContainer = Color(0xFFA94442),
@@ -89,11 +92,17 @@ fun ChildTheme(
         ChildLightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = childTypography,
-        content = content
-    )
+    val clampedDensity = LocalDensity.current.run {
+        if (fontScale > MAX_FONT_SCALE) Density(density, MAX_FONT_SCALE) else this
+    }
+
+    CompositionLocalProvider(LocalDensity provides clampedDensity) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = childTypography,
+            content = content
+        )
+    }
 }
 
 /**
@@ -126,11 +135,17 @@ fun BedtimeTheme(
         outlineVariant = Color(0xFF3A3F58)
     )
 
-    MaterialTheme(
-        colorScheme = bedtimeColorScheme,
-        typography = childTypography,
-        content = content
-    )
+    val clampedDensity = LocalDensity.current.run {
+        if (fontScale > MAX_FONT_SCALE) Density(density, MAX_FONT_SCALE) else this
+    }
+
+    CompositionLocalProvider(LocalDensity provides clampedDensity) {
+        MaterialTheme(
+            colorScheme = bedtimeColorScheme,
+            typography = childTypography,
+            content = content
+        )
+    }
 }
 
 /**
@@ -160,3 +175,10 @@ val childTypography: androidx.compose.material3.Typography
             )
         )
     }
+
+/**
+ * Maximum font scale multiplier to prevent layout overflow.
+ * Font scales beyond 2.0x are clamped to maintain readability
+ * while preventing text truncation in tightly constrained layouts.
+ */
+private const val MAX_FONT_SCALE = 2.0f

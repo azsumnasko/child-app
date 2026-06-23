@@ -184,8 +184,39 @@ class PairingStore {
             parentPublicKey = rs.getString("parent_public_key"),
             status = PairingStatus.valueOf(rs.getString("status")),
             createdAt = rs.getLong("created_at"),
-            expiresAt = rs.getLong("expires_at")
+            expiresAt = rs.getLong("expires_at"),
+            parentPhoneNumber = try { rs.getString("parent_phone_number") } catch (_: Exception) { null },
+            parentDisplayName = try { rs.getString("parent_display_name") } catch (_: Exception) { null }
         )
+    }
+
+    fun updateParentInfo(parentDeviceId: String, phoneNumber: String?, displayName: String?) {
+        synchronized(lock) {
+            val conn = Database.getConnection()
+            val sql = "UPDATE pairing_sessions SET parent_phone_number = ?, parent_display_name = ? WHERE parent_device_id = ? AND status = ?"
+            conn.prepareStatement(sql).use { stmt ->
+                stmt.setString(1, phoneNumber)
+                stmt.setString(2, displayName)
+                stmt.setString(3, parentDeviceId)
+                stmt.setString(4, PairingStatus.COMPLETED.name)
+                stmt.executeUpdate()
+            }
+        }
+    }
+
+    fun getParentInfo(parentDeviceId: String): Pair<String?, String?> {
+        synchronized(lock) {
+            val conn = Database.getConnection()
+            val sql = "SELECT parent_phone_number, parent_display_name FROM pairing_sessions WHERE parent_device_id = ? AND status = ? ORDER BY created_at DESC LIMIT 1"
+            conn.prepareStatement(sql).use { stmt ->
+                stmt.setString(1, parentDeviceId)
+                stmt.setString(2, PairingStatus.COMPLETED.name)
+                stmt.executeQuery().use { rs ->
+                    if (!rs.next()) return Pair(null, null)
+                    return Pair(rs.getString("parent_phone_number"), rs.getString("parent_display_name"))
+                }
+            }
+        }
     }
 
     private fun generatePairingCode(): String {

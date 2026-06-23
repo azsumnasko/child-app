@@ -52,7 +52,7 @@ class CryDetector(
     val cryEvents: Flow<CryDetectionEvent> = _cryEvents.asSharedFlow()
 
     private var detectionJob: Job? = null
-    var isRunning: Boolean = false
+    @Volatile var isRunning: Boolean = false
         private set
 
     /** Whether the detector is running in audio-only mode (no camera required). */

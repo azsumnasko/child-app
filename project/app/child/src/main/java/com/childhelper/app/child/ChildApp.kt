@@ -6,6 +6,7 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import android.util.Log
+import com.childhelper.app.child.ui.call.CallManager
 import com.childhelper.core.network.signaling.WebRtcSignalingClient
 import com.childhelper.core.security.LocaleManager
 import com.childhelper.core.security.SecurePreferences
@@ -22,11 +23,27 @@ class ChildApp : Application() {
     @Inject
     lateinit var signalingClient: WebRtcSignalingClient
 
+    @Inject
+    lateinit var callManager: CallManager
+
     override fun onCreate() {
+        // Global crash logger - writes to file since Xiaomi suppresses app logcat
+        val crashFile = java.io.File(filesDir, "crash_log.txt")
+        Thread.setDefaultUncaughtExceptionHandler { _, ex ->
+            try {
+                val sw = java.io.StringWriter()
+                ex.printStackTrace(java.io.PrintWriter(sw))
+                crashFile.appendText("CRASH: ${java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.US).format(java.util.Date())}\n${sw}\n\n")
+            } catch (_: Exception) {}
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }
+
         super.onCreate()
+        android.util.Log.w(TAG, "ChildApp onCreate START")
         initLocale()
         createNotificationChannels()
         startSignalingPolling()
+        android.util.Log.w(TAG, "ChildApp onCreate DONE")
     }
 
     private fun initLocale() {
@@ -76,11 +93,8 @@ class ChildApp : Application() {
     }
 
     private fun startSignalingPolling() {
-        try {
-            signalingClient.startPolling()
-        } catch (e: Exception) {
-            Log.w(TAG, "Signaling polling start failed", e)
-        }
+        try { signalingClient.startPolling(); Log.i(TAG, "Signaling polling started") }
+        catch (e: Exception) { Log.w(TAG, "Signaling polling start failed", e) }
     }
 
     companion object {

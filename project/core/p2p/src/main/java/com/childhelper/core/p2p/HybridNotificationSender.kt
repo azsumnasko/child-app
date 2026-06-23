@@ -29,6 +29,12 @@ class HybridNotificationSender @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true; encodeDefaults = true }
 
+    companion object {
+        private const val TAG = "HybridNotifSender"
+        private const val MAX_RETRIES = 3
+        private val RETRY_DELAYS = longArrayOf(1000L, 2000L, 4000L)
+    }
+
     override suspend fun sendAlert(alert: Alert, isHighPriority: Boolean): Result<Unit> {
         // Try P2P first (fastest, zero server dependency)
         if (p2pDispatcher.isPeerConnected()) {
@@ -39,37 +45,47 @@ class HybridNotificationSender @Inject constructor(
             }
         }
 
-        // Fall back to server API for internet-wide delivery
-        return try {
-            val payload = buildJsonObject {
-                put("alertId", alert.id)
-                put("eventType", alert.eventType.name)
-                put("timestamp", alert.timestamp)
-                put("childDeviceId", alert.childDeviceId)
-                put("priority", if (isHighPriority) "high" else "normal")
-                alert.confidence?.let { put("confidence", it) }
-                put("batteryPercent", alert.deviceStatus.batteryPercent)
-                put("isCharging", alert.deviceStatus.isCharging)
-                put("networkType", alert.deviceStatus.networkType)
-                put("monitorMode", alert.deviceStatus.monitorMode.name)
-            }
-
-            val response = signalingApi.sendNotification(alert.childDeviceId, payload)
-            if (response.isSuccessful) {
-                Log.d(TAG, "Alert sent via server: ${alert.eventType}")
-                Result.success(Unit)
-            } else {
-                Log.w(TAG, "Server alert failed: ${response.code()}")
-                // Queue locally for P2P retry when peer reconnects
-                p2pDispatcher.sendAlert(alert, isHighPriority)
-                Result.success(Unit) // Alert is queued, not lost
-            }
-        } catch (e: Exception) {
-            Log.w(TAG, "Server unreachable — queueing for P2P", e)
-            p2pDispatcher.sendAlert(alert, isHighPriority)
-            Result.success(Unit)
+        // Fall back to server API with retry for transient failures
+        val payload = buildJsonObject {
+            put("alertId", alert.id)
+            put("eventType", alert.eventType.name)
+            put("timestamp", alert.timestamp)
+            put("childDeviceId", alert.childDeviceId)
+            put("priority", if (isHighPriority) "high" else "normal")
+            alert.confidence?.let { put("confidence", it) }
+            put("batteryPercent", alert.deviceStatus.batteryPercent)
+            put("isCharging", alert.deviceStatus.isCharging)
+            put("networkType", alert.deviceStatus.networkType)
+            put("monitorMode", alert.deviceStatus.monitorMode.name)
         }
-    }
 
-    companion object { private const val TAG = "HybridNotifSender" }
+        var lastError: Exception? = null
+        for (attempt in 0..MAX_RETRIES) {
+            try {
+                val response = signalingApi.sendNotification(alert.childDeviceId, payload)
+                if (response.isSuccessful) {
+                    Log.d(TAG, "Alert sent via server: ${alert.eventType}")
+                    return Result.success(Unit)
+                }
+                // 4xx = don't retry; 5xx = retry
+                if (response.code() in 400..499) {
+                    Log.w(TAG, "Server rejected alert: ${response.code()}")
+                    p2pDispatcher.sendAlert(alert, isHighPriority)
+                    return Result.success(Unit)
+                }
+                Log.w(TAG, "Server error ${response.code()}, attempt ${attempt + 1}/${MAX_RETRIES + 1}")
+            } catch (e: Exception) {
+                lastError = e
+                Log.w(TAG, "Server unreachable, attempt ${attempt + 1}/${MAX_RETRIES + 1}", e)
+            }
+            if (attempt < MAX_RETRIES) {
+                delay(RETRY_DELAYS[attempt])
+            }
+        }
+
+        // All retries exhausted — queue locally for P2P when peer reconnects
+        Log.w(TAG, "All server retries exhausted — queueing for P2P", lastError)
+        p2pDispatcher.sendAlert(alert, isHighPriority)
+        return Result.success(Unit)
+    }
 }

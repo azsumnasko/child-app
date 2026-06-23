@@ -25,25 +25,38 @@ class MessageStore {
         }
     }
 
-    fun dequeueAll(deviceId: String): List<SignalingMessage> {
+    fun dequeueAll(deviceId: String): List<kotlinx.serialization.json.JsonObject> {
         synchronized(lock) {
             val conn = Database.getConnection()
-            val messages = mutableListOf<SignalingMessage>()
-            val selectSql = "SELECT message_json FROM signaling_messages WHERE target_device_id = ? ORDER BY id ASC"
+            val messages = mutableListOf<kotlinx.serialization.json.JsonObject>()
+            val expiryCutoff = System.currentTimeMillis() - 300_000
+            println("[DEQUEUE] deviceId=${deviceId.take(12)} cutoff=$expiryCutoff now=${System.currentTimeMillis()}")
+            val selectSql = "SELECT message_json, created_at, message_type FROM signaling_messages WHERE target_device_id = ? ORDER BY id ASC"
+            var totalRows = 0
+            var expiredCount = 0
             conn.prepareStatement(selectSql).use { stmt ->
                 stmt.setString(1, deviceId)
                 stmt.executeQuery().use { rs ->
                     while (rs.next()) {
-                        val msgJson = rs.getString("message_json")
-                        messages.add(json.decodeFromString(SignalingMessage.serializer(), msgJson))
+                        totalRows++
+                        val createdAt = rs.getLong("created_at")
+                        if (createdAt > expiryCutoff) {
+                            val msgJson = rs.getString("message_json")
+                            messages.add(json.decodeFromString(msgJson))
+                        } else {
+                            expiredCount++
+                            println("[DEQUEUE] expired row: type=${rs.getString("message_type")} created=$createdAt cutoff=$expiryCutoff diff=${expiryCutoff - createdAt}ms")
+                        }
                     }
                 }
             }
+            println("[DEQUEUE] total=$totalRows expired=$expiredCount returned=${messages.size}")
             if (messages.isNotEmpty()) {
                 val deleteSql = "DELETE FROM signaling_messages WHERE target_device_id = ?"
                 conn.prepareStatement(deleteSql).use { stmt ->
                     stmt.setString(1, deviceId)
-                    stmt.executeUpdate()
+                    val deleted = stmt.executeUpdate()
+                    println("[DEQUEUE] deleted $deleted rows")
                 }
             }
             return messages

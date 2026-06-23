@@ -124,7 +124,8 @@ fun LiveViewScreen(
 
     // Auto-start connection on first launch
     LaunchedEffect(Unit) {
-        if (uiState.connectionState == LiveConnectionState.IDLE) {
+        if (uiState.connectionState == LiveConnectionState.IDLE ||
+            uiState.connectionState == LiveConnectionState.CLOSED) {
             viewModel.startConnection()
         }
     }
@@ -135,7 +136,8 @@ fun LiveViewScreen(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
-                    if (uiState.connectionState == LiveConnectionState.DISCONNECTED) {
+                    if (uiState.connectionState == LiveConnectionState.DISCONNECTED ||
+                        uiState.connectionState == LiveConnectionState.CLOSED) {
                         viewModel.retryConnection()
                     }
                 }

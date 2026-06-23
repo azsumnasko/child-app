@@ -16,6 +16,7 @@ import com.childhelper.core.common.model.Contact
 import com.childhelper.core.common.model.ContactRole
 import com.childhelper.core.common.model.DetectionConfig
 import com.childhelper.core.common.model.MonitorMode
+import com.childhelper.core.network.api.PairingApi
 import com.childhelper.core.security.SecurePreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +24,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import javax.inject.Inject
 
 /**
@@ -45,7 +48,8 @@ class ChildHomeViewModel @Inject constructor(
     private val cryDetector: CryDetector,
     private val motionDetector: MotionDetector,
     private val voicePromptManager: VoicePromptManager,
-    private val monitoringCoordinator: MonitoringCoordinator
+    private val monitoringCoordinator: MonitoringCoordinator,
+    private val pairingApi: PairingApi
 ) : AndroidViewModel(application) {
 
     private val _uiState = MutableStateFlow(ChildHomeUiState())
@@ -112,18 +116,26 @@ class ChildHomeViewModel @Inject constructor(
             val parentDeviceId = securePreferences.getString("paired_parent_device_id")
             val isPaired = securePreferences.getBoolean("is_paired", false)
             if (isPaired && parentDeviceId != null) {
+                // Try fetching parent info from server (phone, display name)
+                try {
+                    val info = pairingApi.getParentInfo(parentDeviceId)
+                    val serverName = info["displayName"]?.jsonPrimitive?.contentOrNull
+                    val serverPhone = info["phoneNumber"]?.jsonPrimitive?.contentOrNull
+                    if (!serverName.isNullOrBlank()) securePreferences.putString("parent_display_name", serverName)
+                    if (!serverPhone.isNullOrBlank()) securePreferences.putString("parent_phone_number", serverPhone)
+                } catch (_: Exception) { /* server may not have parent info set yet */ }
+
+                val parentName = securePreferences.getString("parent_display_name")
+                    ?: getApplication<Application>().getString(R.string.contact_parent_label)
+                val parentPhone = securePreferences.getString("parent_phone_number")
+
                 val defaultContacts = listOf(
                     Contact(
                         id = parentDeviceId,
-                        name = "Mom",
-                        role = ContactRole.MOTHER,
-                        isPrimary = true
-                    ),
-                    Contact(
-                        id = parentDeviceId,
-                        name = "Dad",
-                        role = ContactRole.FATHER,
-                        isPrimary = false
+                        name = parentName,
+                        role = ContactRole.GUARDIAN,
+                        isPrimary = true,
+                        phoneNumber = parentPhone
                     )
                 )
                 _uiState.update { it.copy(contacts = defaultContacts) }
@@ -135,12 +147,22 @@ class ChildHomeViewModel @Inject constructor(
 
     fun onContactClick(contact: Contact, hasVideo: Boolean = true) {
         if (_navigationEvent.value != null) return
-        val displayName = when (contact.role) {
-            ContactRole.MOTHER -> "Mom"
-            ContactRole.FATHER -> "Dad"
-            ContactRole.GUARDIAN -> contact.name
-        }
+        val app = getApplication<Application>()
+        val displayName = contact.name
         _navigationEvent.value = HomeNavigationEvent.NavigateToCall(contact.id, hasVideo = hasVideo, contactName = displayName)
+    }
+
+    fun onAudioCallClick(contact: Contact) {
+        if (_navigationEvent.value != null) return
+        val phone = contact.phoneNumber
+        if (!phone.isNullOrBlank()) {
+            val intent = android.content.Intent(android.content.Intent.ACTION_CALL).apply {
+                data = android.net.Uri.parse("tel:$phone")
+            }
+            getApplication<Application>().startActivity(intent)
+        } else {
+            onContactClick(contact, hasVideo = false)
+        }
     }
 
     fun onSosClick() {

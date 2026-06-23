@@ -44,7 +44,7 @@ class MotionDetector(
     val motionEvents: Flow<MotionDetectionEvent> = _motionEvents.asSharedFlow()
 
     private var detectionJob: Job? = null
-    var isRunning: Boolean = false
+    @Volatile var isRunning: Boolean = false
         private set
 
     // Detection state

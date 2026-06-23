@@ -18,9 +18,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.flow.MutableSharedFlow
-import kotlinx.coroutines.flow.SharedFlow
-import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
@@ -63,6 +60,9 @@ class FcmService : FirebaseMessagingService() {
     @Inject
     lateinit var securePreferences: SecurePreferences
 
+    @Inject
+    lateinit var alertFlowProvider: AlertFlowProvider
+
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var pendingToken: String? = null
 
@@ -79,21 +79,19 @@ class FcmService : FirebaseMessagingService() {
 
     private fun tryRegisterToken() {
         val token = pendingToken ?: return
-        try {
-            val deviceId = kotlinx.coroutines.runBlocking {
-                securePreferences.getString("device_id")
-            } ?: return
-            val payload = buildJsonObject {
-                put("deviceId", deviceId)
-                put("fcmToken", token)
-            }
-            kotlinx.coroutines.runBlocking {
+        serviceScope.launch {
+            try {
+                val deviceId = securePreferences.getString("device_id") ?: return@launch
+                val payload = buildJsonObject {
+                    put("deviceId", deviceId)
+                    put("fcmToken", token)
+                }
                 pairingApi.registerFcmToken(payload)
+                pendingToken = null
+                Log.i(TAG, "FCM token registered for device $deviceId")
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to register FCM token", e)
             }
-            pendingToken = null
-            Log.i(TAG, "FCM token registered for device $deviceId")
-        } catch (e: Exception) {
-            Log.w(TAG, "Failed to register FCM token", e)
         }
     }
 
@@ -101,11 +99,16 @@ class FcmService : FirebaseMessagingService() {
      * Called when a new FCM message is received while the app is in the foreground.
      *
      * Parses the message payload into an [Alert] object and emits it via
-     * [alertFlow]. If the message is a signaling trigger, it initiates
+     * [AlertFlowProvider.alertFlow]. If the message is a signaling trigger, it initiates
      * an immediate poll via [WebRtcSignalingClient.pollNow].
      */
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
         super.onMessageReceived(remoteMessage)
+
+        if (!::signalingClient.isInitialized || !::alertFlowProvider.isInitialized) {
+            Log.w(TAG, "FcmService not yet initialized, deferring message")
+            return
+        }
 
         val data = remoteMessage.data
         if (data.isEmpty()) return
@@ -123,7 +126,7 @@ class FcmService : FirebaseMessagingService() {
             val alert = parseAlert(data)
             if (alert != null) {
                 serviceScope.launch {
-                    _alertFlow.emit(alert)
+                    alertFlowProvider.emitAlert(alert)
                 }
             }
         }
@@ -213,28 +216,6 @@ class FcmService : FirebaseMessagingService() {
 
     companion object {
         private const val TAG = "FcmService"
-        private val _alertFlow = MutableSharedFlow<Alert>(extraBufferCapacity = 64)
-
-        /**
-         * SharedFlow of alerts received from FCM push notifications.
-         *
-         * Collect this flow in ViewModels or repositories to react to
-         * real-time events from the child device.
-         *
-         * Example:
-         * ```
-         * viewModelScope.launch {
-         *     FcmService.alertFlow.collect { alert ->
-         *         when (alert.eventType) {
-         *             AlertType.CRY_DETECTED -> showCryNotification(alert)
-         *             AlertType.SOS_ACTIVATED -> showSosDialog(alert)
-         *             else -> logAlert(alert)
-         *         }
-         *     }
-         * }
-         * ```
-         */
-        val alertFlow: SharedFlow<Alert> = _alertFlow.asSharedFlow()
 
         /**
          * Generates a unique alert ID using a cryptographically secure random source.
@@ -247,13 +228,5 @@ class FcmService : FirebaseMessagingService() {
          */
         private fun generateAlertId(): String =
             "alert-${System.currentTimeMillis()}-${UUID.randomUUID()}"
-
-        /**
-         * Internal emitter for testing purposes.
-         * Not for production use — alerts should only come from FCM.
-         */
-        internal suspend fun emitTestAlert(alert: Alert) {
-            _alertFlow.emit(alert)
-        }
     }
 }

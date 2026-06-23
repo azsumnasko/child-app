@@ -41,6 +41,7 @@ class ChildHomeActivity : ComponentActivity() {
     private val permissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
+        if (!::permissionManager.isInitialized) return@registerForActivityResult
         val result = permissionManager.handlePermissionResult(permissions)
         when (result) {
             is PermissionResult.AllGranted -> {

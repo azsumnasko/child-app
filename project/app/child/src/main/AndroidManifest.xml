@@ -27,6 +27,9 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Phone call for audio-only PSTN fallback -->
+    <uses-permission android:name="android.permission.CALL_PHONE" />
+
     <!-- Foreground service for continuous monitoring -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CAMERA" />

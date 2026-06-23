@@ -33,7 +33,7 @@ interface SignalingApi {
      */
     @POST("/api/v1/signal/offer")
     suspend fun sendOffer(
-        @Body offer: SdpMessage
+        @Body offer: SignalingMessage
     )
 
     /**
@@ -47,7 +47,7 @@ interface SignalingApi {
      */
     @POST("/api/v1/signal/answer")
     suspend fun sendAnswer(
-        @Body answer: SdpMessage
+        @Body answer: SignalingMessage
     )
 
     /**
@@ -77,7 +77,7 @@ interface SignalingApi {
     @GET("/api/v1/signal/pending/{deviceId}")
     suspend fun getPendingMessages(
         @Path("deviceId") deviceId: String
-    ): List<SignalingMessage>
+    ): List<JsonObject>
 
     /**
      * Polls for pending alert notifications addressed to the parent device.

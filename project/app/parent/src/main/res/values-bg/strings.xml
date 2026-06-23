@@ -78,6 +78,7 @@
     <string name="live_view_connected">Поток на живо е активен</string>
     <string name="live_view_disconnected">Прекъснато</string>
     <string name="live_view_error">Грешка при свързване: %s</string>
+    <string name="live_view_error_no_paired_device">Няма намерено сдвоено детско устройство</string>
     <string name="talk_back_label">Обратен разговор</string>
     <string name="talk_back_description">Задръжте, за да говорите с детето си</string>
     <string name="end_live_view_label">Край на изглед на живо</string>

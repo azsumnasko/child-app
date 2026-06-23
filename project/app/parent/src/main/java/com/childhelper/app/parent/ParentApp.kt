@@ -12,11 +12,12 @@ import com.childhelper.core.common.model.AlertType
 import com.childhelper.core.common.model.DeviceStatusSnapshot
 import com.childhelper.core.common.model.MonitorMode
 import com.childhelper.core.network.api.SignalingApi
-import com.childhelper.core.network.push.FcmService
+import com.childhelper.core.network.push.AlertFlowProvider
 import com.childhelper.core.network.signaling.WebRtcSignalingClient
 import com.childhelper.core.security.LocaleManager
 import com.childhelper.core.security.SecurePreferences
 import com.childhelper.app.parent.di.AppScope
+import com.childhelper.app.parent.ui.liveview.LiveViewConnectionManager
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -39,10 +40,16 @@ class ParentApp : Application() {
     lateinit var alertHistoryRepository: AlertHistoryRepository
 
     @Inject
+    lateinit var alertFlowProvider: AlertFlowProvider
+
+    @Inject
     lateinit var signalingClient: WebRtcSignalingClient
 
     @Inject
     lateinit var signalingApi: SignalingApi
+
+    @Inject
+    lateinit var liveViewConnectionManager: LiveViewConnectionManager
 
     private val appScope = CoroutineScope(SupervisorJob())
 
@@ -68,6 +75,7 @@ class ParentApp : Application() {
             startAlertIngestion()
             startSignalingPolling()
             startNotificationPolling()
+            Log.i(TAG, "LiveViewCM ready: ${liveViewConnectionManager.hashCode()}")
             Log.i(TAG, "onCreate done")
         } catch (e: Exception) {
             Log.e(TAG, "onCreate crashed", e)
@@ -98,8 +106,12 @@ class ParentApp : Application() {
     }
 
     private fun startAlertIngestion() {
+        if (!::alertFlowProvider.isInitialized || !::alertHistoryRepository.isInitialized) {
+            Log.w(TAG, "startAlertIngestion skipped — dependencies not yet initialized")
+            return
+        }
         appScope.launch {
-            FcmService.alertFlow.collect { alert ->
+            alertFlowProvider.alertFlow.collect { alert ->
                 try {
                     alertHistoryRepository.insertAlert(alert)
                 } catch (e: Exception) {
@@ -128,11 +140,8 @@ class ParentApp : Application() {
     }
 
     private fun startSignalingPolling() {
-        try {
-            signalingClient.startPolling()
-        } catch (e: Exception) {
-            Log.w(TAG, "Signaling polling start failed", e)
-        }
+        try { signalingClient.startPolling(); Log.i(TAG, "Signaling polling started") }
+        catch (e: Exception) { Log.w(TAG, "Signaling polling start failed", e) }
     }
 
     private fun startNotificationPolling() {

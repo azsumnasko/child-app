@@ -78,6 +78,7 @@
     <string name="live_view_connected">Live stream active</string>
     <string name="live_view_disconnected">Disconnected</string>
     <string name="live_view_error">Connection error: %s</string>
+    <string name="live_view_error_no_paired_device">No paired child device found</string>
     <string name="talk_back_label">Talk Back</string>
     <string name="talk_back_description">Hold to speak to your child</string>
     <string name="end_live_view_label">End Live View</string>

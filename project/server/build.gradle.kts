@@ -29,6 +29,7 @@ dependencies {
     implementation(libs.ktor.server.cors)
     implementation(libs.ktor.serialization.json)
     implementation(libs.ktor.server.status.pages)
+    implementation(libs.ktor.server.websockets)
 
     // Shared models
     implementation(project(":core:common"))

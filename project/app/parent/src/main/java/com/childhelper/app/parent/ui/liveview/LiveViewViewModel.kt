@@ -1,9 +1,12 @@
 package com.childhelper.app.parent.ui.liveview
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.childhelper.app.parent.R
 import com.childhelper.core.security.SecurePreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -73,6 +76,7 @@ data class LiveViewUiState(
  */
 @HiltViewModel
 class LiveViewViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val connectionManager: LiveViewConnectionManager,
     private val talkBackManager: TalkBackManager,
     private val securePreferences: SecurePreferences
@@ -230,14 +234,16 @@ class LiveViewViewModel @Inject constructor(
         _connectionDurationMs.value = 0L
         viewModelScope.launch {
             val childDeviceId = securePreferences.getString("paired_child_device_id", "") ?: ""
+            android.util.Log.w("LiveViewVM", "startConnection: paired_child_device_id=$childDeviceId")
             if (childDeviceId.isBlank()) {
+                android.util.Log.e("LiveViewVM", "startConnection: no paired child device")
                 _connectionState.value = LiveConnectionState.FAILED
-                _errorMessage.value = "No paired child device found"
+                _errorMessage.value = context.getString(R.string.live_view_error_no_paired_device)
                 return@launch
             }
 
             try {
-                withTimeout(30_000) {
+                withTimeout(60_000) {
                     val result = connectionManager.connect(childDeviceId)
                     if (result.isFailure) {
                         _connectionState.value = LiveConnectionState.FAILED

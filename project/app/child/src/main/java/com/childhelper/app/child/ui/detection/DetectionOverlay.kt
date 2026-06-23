@@ -34,11 +34,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.childhelper.app.child.ui.theme.ChildColors
+import com.childhelper.app.child.R
 import com.childhelper.core.common.model.Alert
 import com.childhelper.core.common.model.AlertType
 import java.text.SimpleDateFormat
@@ -231,13 +233,13 @@ private fun ObstructionWarningCard() {
             Spacer(modifier = Modifier.width(12.dp))
             Column {
                 Text(
-                    text = "Camera Blocked",
+                    text = stringResource(R.string.detection_camera_blocked),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF856404)
                 )
                 Text(
-                    text = "Please make sure the camera is not covered",
+                    text = stringResource(R.string.detection_camera_blocked_desc),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF856404)
                 )
@@ -267,6 +269,7 @@ private fun LatestAlertCard(alert: Alert) {
         AlertType.CALL_ENDED -> "Call ended"
         AlertType.THERMAL_WARNING -> "Thermal warning"
         AlertType.DEVICE_OVERHEATING -> "Device overheating"
+        else -> ""
     }
 
     val timeStr = SimpleDateFormat("HH:mm:ss", Locale.getDefault())

@@ -7,7 +7,9 @@ import com.childhelper.app.child.detection.CryDetector
 import com.childhelper.app.child.detection.EventPipeline
 import com.childhelper.app.child.detection.MotionDetector
 import com.childhelper.core.common.model.DetectionConfig
+import com.childhelper.core.common.model.MonitorMode
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +21,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -167,6 +170,7 @@ class MonitoringCoordinator(
 
         // Publish the state change AFTER detectors are started
         _monitoringState.value = MonitoringState.Active(config)
+        eventPipeline.setMonitorMode(MonitorMode.IDLE)
         Log.i(TAG, "Monitoring state → Active")
 
         // Start thermal monitoring if provided
@@ -200,7 +204,50 @@ class MonitoringCoordinator(
 
         // Publish the state change AFTER detectors are stopped
         _monitoringState.value = MonitoringState.Idle
+        eventPipeline.setMonitorMode(MonitorMode.IDLE)
         Log.i(TAG, "Monitoring state → Idle")
+    }
+
+    /**
+     * Suspend camera-based monitoring (motion detection) to free the camera
+     * for a WebRTC call. Audio-based cry detection continues running.
+     * Call [resumeCameraAfterCall] when the call ends.
+     * Must be called from a coroutine (uses Dispatchers.Main for CameraX).
+     */
+    suspend fun suspendCameraForCall() {
+        Log.i(TAG, "Suspending motion detection for call (camera stays bound for Preview)")
+        motionEventJob?.cancel()
+        motionEventJob = null
+        motionDetector.stopDetection()
+        withContext(kotlinx.coroutines.Dispatchers.Main) {
+            cameraPipeline.suspendImageAnalysisOnly()
+        }
+    }
+
+    /**
+     * Resume camera-based monitoring after a WebRTC call ends.
+     * Only restarts if monitoring was active before the call.
+     */
+    fun resumeCameraAfterCall() {
+        val config = _currentConfig
+        if (config == null || monitoringState.value !is MonitoringState.Active) {
+            Log.d(TAG, "Skipping camera resume — monitoring not active")
+            return
+        }
+        Log.i(TAG, "Resuming camera after call")
+        try {
+            val lifecycleOwner = cameraPipeline.getSavedLifecycleOwner()
+                ?: return
+            if (config.motionEnabled) {
+                cameraPipeline.resumeImageAnalysis()
+                motionDetector.startDetection(config, lifecycleOwner)
+                motionEventJob = scope.launch {
+                    motionDetector.motionEvents.collect { eventPipeline.submitMotionEvent(it) }
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to resume camera after call", e)
+        }
     }
 
     /**

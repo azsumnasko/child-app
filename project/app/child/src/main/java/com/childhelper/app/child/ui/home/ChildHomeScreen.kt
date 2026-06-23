@@ -217,12 +217,16 @@ fun ChildHomeScreen(
             // Additional actions
             QuickActionsRow(
                 onAudioCallMom = {
-                    val mom = uiState.contacts.find { it.role == ContactRole.MOTHER }
-                    mom?.let { viewModel.onContactClick(it.copy(isPrimary = true), hasVideo = false) }
+                    val contact = uiState.contacts.firstOrNull()
+                    if (contact != null) {
+                        viewModel.onAudioCallClick(contact)
+                    }
                 },
                 onAudioCallDad = {
-                    val dad = uiState.contacts.find { it.role == ContactRole.FATHER }
-                    dad?.let { viewModel.onContactClick(it, hasVideo = false) }
+                    val contact = uiState.contacts.firstOrNull()
+                    if (contact != null) {
+                        viewModel.onAudioCallClick(contact)
+                    }
                 },
                 onPairWithParent = { viewModel.onPairingClick() }
             )

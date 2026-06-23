@@ -199,15 +199,18 @@ class CallViewModel @Inject constructor(
     }
 
     private suspend fun getContactName(contactId: String): String {
+        val context = getApplication<Application>()
         return try {
-            // Try to get from secure preferences or default
             when {
-                contactId.contains("mom", ignoreCase = true) -> "Mom"
-                contactId.contains("dad", ignoreCase = true) -> "Dad"
-                else -> "Guardian"
+                contactId.contains("mom", ignoreCase = true) ->
+                    context.getString(R.string.contact_mom_label)
+                contactId.contains("dad", ignoreCase = true) ->
+                    context.getString(R.string.contact_dad_label)
+                else ->
+                    context.getString(R.string.contact_guardian_role_label)
             }
         } catch (e: Exception) {
-            "Guardian"
+            context.getString(R.string.contact_guardian_role_label)
         }
     }
 

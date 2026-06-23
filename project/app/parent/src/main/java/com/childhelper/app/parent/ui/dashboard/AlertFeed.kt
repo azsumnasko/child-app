@@ -59,6 +59,7 @@ fun alertTypeColor(eventType: String): androidx.compose.ui.graphics.Color {
             AlertType.CALL_ENDED -> AlertCall
             AlertType.THERMAL_WARNING -> AlertDevice
             AlertType.DEVICE_OVERHEATING -> AlertDevice
+            AlertType.STATUS_UPDATE -> AlertDevice
         }
     } catch (_: IllegalArgumentException) {
         MaterialTheme.colorScheme.outline
@@ -81,6 +82,7 @@ fun alertTypeLabel(eventType: String): String {
             AlertType.CALL_ENDED -> "Call Ended"
             AlertType.THERMAL_WARNING -> "Thermal Warning"
             AlertType.DEVICE_OVERHEATING -> "Device Overheating"
+            AlertType.STATUS_UPDATE -> ""
         }
     } catch (_: IllegalArgumentException) {
         eventType

@@ -13,6 +13,7 @@ import android.util.Log
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -77,6 +78,7 @@ class CameraPipeline(
 ) {
     private var cameraProvider: ProcessCameraProvider? = null
     private var imageAnalysis: ImageAnalysis? = null
+    private var previewUseCase: Preview? = null
     private val cameraExecutor = Executors.newSingleThreadExecutor()
 
     private val _frames = MutableSharedFlow<ImageProxy>(
@@ -98,16 +100,20 @@ class CameraPipeline(
      * Thread-safe closed-state tracker to prevent double-close of ImageProxy.
      * Uses WeakHashMap so entries are automatically cleaned up when ImageProxies
      * are garbage collected — no need to manually remove after closing.
-     * CRIT-6 FIX: Was HashSet with manual remove in finally block, allowing
-     * the same proxy to be closed again after removal.
+     * Wrapped in Collections.synchronizedSet for thread safety across
+     * camera executor and coroutine dispatcher threads.
      */
-    private val closedFlags = java.util.Collections.newSetFromMap(
-        java.util.WeakHashMap<ImageProxy, Boolean>()
+    private val closedFlags = java.util.Collections.synchronizedSet(
+        java.util.Collections.newSetFromMap(
+            java.util.WeakHashMap<ImageProxy, Boolean>()
+        )
     )
 
     private var currentLifecycleOwner: LifecycleOwner? = null
     /** Saved lifecycle owner for thermal recovery. See CRIT-1. */
     private var savedLifecycleOwner: LifecycleOwner? = null
+
+    fun getSavedLifecycleOwner(): LifecycleOwner? = savedLifecycleOwner
     private var lowPowerJob: Job? = null
 
     /** Frame throttle counter for approximating target FPS in low-power modes. */
@@ -238,7 +244,7 @@ class CameraPipeline(
         }, ContextCompat.getMainExecutor(context))
 
         // Subscribe to low-power mode changes and rebind camera accordingly
-        lowPowerJob = scope.launch {
+        lowPowerJob = scope.launch(Dispatchers.Main) {
             lowPowerMode.collect { mode ->
                 if (!isRunning) return@collect
                 _currentPowerMode.value = mode
@@ -428,6 +434,49 @@ class CameraPipeline(
         }
     }
 
+    fun bindPreview(preview: Preview) {
+        previewUseCase = preview
+        val provider = cameraProvider ?: return
+        val lo = currentLifecycleOwner ?: return
+        try {
+            provider.unbindAll()
+            val useCases = mutableListOf<androidx.camera.core.UseCase>()
+            imageAnalysis?.let { useCases.add(it) }
+            useCases.add(preview)
+            provider.bindToLifecycle(lo, CameraSelector.DEFAULT_BACK_CAMERA, *useCases.toTypedArray())
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to bind Preview alongside ImageAnalysis", e)
+        }
+    }
+
+    fun unbindPreview() {
+        val provider = cameraProvider ?: return
+        try {
+            provider.unbind(previewUseCase)
+        } catch (_: Exception) {}
+        previewUseCase = null
+    }
+
+    fun suspendImageAnalysisOnly() {
+        savedLifecycleOwner = currentLifecycleOwner
+        val provider = cameraProvider ?: return
+        try {
+            provider.unbind(imageAnalysis)
+            imageAnalysis?.clearAnalyzer()
+        } catch (_: Exception) {}
+    }
+
+    fun resumeImageAnalysis() {
+        val provider = cameraProvider ?: return
+        val lo = currentLifecycleOwner ?: return
+        if (imageAnalysis == null) return
+        try {
+            provider.bindToLifecycle(lo, CameraSelector.DEFAULT_BACK_CAMERA, imageAnalysis)
+        } catch (e: Exception) {
+            Log.w(TAG, "Failed to resume ImageAnalysis", e)
+        }
+    }
+
     /**
      * Resume normal camera operation after recovering from low-power or critical mode.
      *
@@ -435,16 +484,14 @@ class CameraPipeline(
      * Call this when the device starts charging or battery recovers above thresholds.
      */
     fun resumeNormalMode() {
-        // CRIT-1 FIX: Use savedLifecycleOwner as fallback when currentLifecycleOwner
-        // was nulled by stopAnalysis() during thermal HOT state. Without this, the
-        // camera can never recover after thermal throttling because resumeNormalMode()
-        // returns early with no lifecycle owner to bind to.
         val lifecycleOwner = currentLifecycleOwner ?: savedLifecycleOwner ?: return
         if (!isRunning) return
 
         _currentPowerMode.value = PowerMode.NORMAL
         Log.i(TAG, "Resuming normal camera mode")
-        rebindWithPowerMode(lifecycleOwner, PowerMode.NORMAL)
+        scope.launch(Dispatchers.Main) {
+            rebindWithPowerMode(lifecycleOwner, PowerMode.NORMAL)
+        }
     }
 
     /**
@@ -482,7 +529,9 @@ class CameraPipeline(
      */
     private fun checkObstruction(imageProxy: ImageProxy) {
         try {
-            val yPlane = imageProxy.planes[0]
+            val planes = imageProxy.planes
+            if (planes.isEmpty()) return
+            val yPlane = planes[0]
             val yBuffer = yPlane.buffer
             val yRowStride = yPlane.rowStride
             val width = imageProxy.width
@@ -535,7 +584,9 @@ class CameraPipeline(
         targetHeight: Int = 240
     ): ByteArray? {
         return try {
-            val yPlane = imageProxy.planes[0]
+            val planes = imageProxy.planes
+            if (planes.isEmpty()) return null
+            val yPlane = planes[0]
             val yBuffer = yPlane.buffer
             val yRowStride = yPlane.rowStride
             val width = imageProxy.width

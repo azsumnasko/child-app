@@ -12,6 +12,7 @@ import com.childhelper.app.child.ui.bedtime.VoicePromptManager
 import com.childhelper.app.child.ui.call.AudioDeviceManager
 import com.childhelper.app.child.ui.call.CallManager
 import com.childhelper.app.child.ui.call.CameraCaptureManager
+import com.childhelper.app.child.ui.call.CameraXVideoCapturer
 import com.childhelper.app.child.ui.call.WebRtcPeerConnectionManager
 import com.childhelper.app.child.ui.sos.SosManager
 import com.childhelper.core.common.notification.NotificationSender
@@ -147,6 +148,15 @@ object ChildAppModule {
 
     @Provides
     @Singleton
+    fun provideCameraXVideoCapturer(
+        @ApplicationContext context: Context,
+        @ChildScope scope: CoroutineScope
+    ): CameraXVideoCapturer {
+        return CameraXVideoCapturer(context, scope)
+    }
+
+    @Provides
+    @Singleton
     fun provideAudioDeviceManager(
         @ApplicationContext context: Context
     ): AudioDeviceManager {
@@ -163,7 +173,10 @@ object ChildAppModule {
         peerConnectionManager: WebRtcPeerConnectionManager,
         cameraCaptureManager: CameraCaptureManager,
         audioDeviceManager: AudioDeviceManager,
-        pairingApi: PairingApi
+        pairingApi: PairingApi,
+        monitoringCoordinator: MonitoringCoordinator,
+        cameraPipeline: CameraPipeline,
+        cameraXVideoCapturer: CameraXVideoCapturer
     ): CallManager {
         return CallManager(
             context,
@@ -173,7 +186,10 @@ object ChildAppModule {
             peerConnectionManager,
             cameraCaptureManager,
             audioDeviceManager,
-            pairingApi
+            pairingApi,
+            monitoringCoordinator,
+            cameraPipeline,
+            cameraXVideoCapturer
         )
     }
 

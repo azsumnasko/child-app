@@ -51,5 +51,7 @@ data class PairingSession(
     val parentPublicKey: String? = null,
     val status: PairingStatus = PairingStatus.PENDING,
     val createdAt: Long = System.currentTimeMillis(),
-    val expiresAt: Long = System.currentTimeMillis() + 5 * 60 * 1000
+    val expiresAt: Long = System.currentTimeMillis() + 5 * 60 * 1000,
+    val parentPhoneNumber: String? = null,
+    val parentDisplayName: String? = null
 )

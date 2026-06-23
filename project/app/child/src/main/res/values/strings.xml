@@ -34,11 +34,17 @@
     <string name="contact_guardian_description">Call Guardian</string>
     <string name="contact_mom_label">Mom</string>
     <string name="contact_dad_label">Dad</string>
+    <string name="contact_parent_label">Call Parent</string>
+    <string name="contact_guardian_role_label">Guardian</string>
     <string name="contact_call_description">Call %s. Tap to call.</string>
 
     <!-- SOS Screen -->
     <string name="sos_title">SOS</string>
     <string name="sos_activated">SOS Alert Sent</string>
+    <string name="sos_alert_sending">Alert is being sent to your emergency contacts</string>
+    <string name="sos_help_coming">Help is on the way</string>
+    <string name="sos_guardians_notified_body">Your guardians have been notified. Stay calm and wait for them.</string>
+    <string name="sos_guardians_notified_cd">Guardians have been notified. Help is on the way.</string>
     <string name="sos_countdown_format">SOS in %d...</string>
     <string name="sos_voice_prompt">SOS activated. Help is being notified. Stay calm.</string>
     <string name="sos_countdown_voice">%d</string>
@@ -88,6 +94,7 @@
     <string name="bedtime_auto_answer_subtitle">Answer Mom/Dad calls automatically</string>
     <string name="bedtime_auto_answer_on_voice">Auto answer is on. Calls will be answered automatically.</string>
     <string name="bedtime_auto_answer_off_voice">Auto answer is off.</string>
+    <string name="bedtime_incoming_call_voice">Incoming call from %s. Answering automatically.</string>
     <string name="bedtime_monitoring_active">Cry and motion monitoring is active during bedtime.</string>
     <string name="bedtime_monitoring_inactive">Monitoring will start automatically when you fall asleep.</string>
     <string name="bedtime_listening_active">Listening for you</string>
@@ -104,6 +111,8 @@
     <string name="cry_detected">Cry Detected</string>
     <string name="motion_detected">Motion Detected</string>
     <string name="camera_obstructed">Camera Obstructed</string>
+    <string name="detection_camera_blocked">Camera Blocked</string>
+    <string name="detection_camera_blocked_desc">Please make sure the camera is not covered</string>
 
     <!-- Generic -->
     <string name="voice_calling_mom">Calling Mom</string>

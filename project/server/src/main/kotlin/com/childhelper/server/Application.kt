@@ -4,6 +4,7 @@ import com.childhelper.server.routes.notificationRoutes
 import com.childhelper.server.routes.pairingRoutes
 import com.childhelper.server.routes.signalingRoutes
 import com.childhelper.server.routes.turnRoutes
+import com.childhelper.server.routes.webSocketRoutes
 import com.childhelper.server.store.AlertStore
 import com.childhelper.server.store.MessageStore
 import com.childhelper.server.store.PairingStore
@@ -55,6 +56,7 @@ fun main() {
 
         pairingRoutes(pairingStore)
         signalingRoutes(messageStore, pairingStore, fcmDispatcher)
+        webSocketRoutes()
         notificationRoutes(fcmDispatcher, pairingStore, alertStore)
         turnRoutes()
     }.start(wait = true)

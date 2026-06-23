@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Shield shape -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,28 L78,36 L78,52 C78,67.2 67.7,80.8 54,84 C40.3,80.8 30,67.2 30,52 L30,36 Z" />
+    <!-- Eye/watch icon inside shield -->
+    <path
+        android:fillColor="#00695C"
+        android:pathData="M54,48 C48.5,48 44,52.5 44,58 C44,63.5 48.5,68 54,68 C59.5,68 64,63.5 64,58 C64,52.5 59.5,48 54,48 Z M54,64 C50.7,64 48,61.3 48,58 C48,54.7 50.7,52 54,52 C57.3,52 60,54.7 60,58 C60,61.3 57.3,64 54,64 Z" />
+    <path
+        android:fillColor="#00695C"
+        android:pathData="M54,44 C44.3,44 35.9,50.7 32.4,58 C35.9,65.3 44.3,72 54,72 C63.7,72 72.1,65.3 75.6,58 C72.1,50.7 63.7,44 54,44 Z M54,68 C46.3,68 38.9,62.9 36,58 C38.9,53.1 46.3,48 54,48 C61.7,48 69.1,53.1 72,58 C69.1,62.9 61.7,68 54,68 Z" />
+</vector>

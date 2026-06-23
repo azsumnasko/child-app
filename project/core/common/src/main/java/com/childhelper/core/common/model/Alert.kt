@@ -39,7 +39,10 @@ enum class AlertType {
     THERMAL_WARNING,
 
     /** Device is critically overheating — monitoring stopped for safety. */
-    DEVICE_OVERHEATING
+    DEVICE_OVERHEATING,
+
+    /** Periodic device status update (battery, network, monitor mode) — not a user alert. */
+    STATUS_UPDATE
 }
 
 /**

@@ -12,6 +12,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class CompletePairingRequest(val sessionId: String, val parentDeviceId: String, val parentPublicKey: String, val pairingCode: String)
 @Serializable data class CompleteByCodeRequest(val parentDeviceId: String, val parentPublicKey: String, val pairingCode: String)
 @Serializable data class RevokePairingRequest(val sessionId: String, val deviceId: String)
+@Serializable data class UpdateParentInfoRequest(val parentDeviceId: String, val phoneNumber: String? = null, val displayName: String? = null)
 
 fun Application.pairingRoutes(store: PairingStore) {
     routing {
@@ -43,6 +44,16 @@ fun Application.pairingRoutes(store: PairingStore) {
                 val session = store.getSession(sessionId)
                 if (session != null) call.respond(HttpStatusCode.OK, session)
                 else call.respond(HttpStatusCode.NotFound, mapOf("error" to "Session not found"))
+            }
+            post("/parent-info") {
+                val req = call.receive<UpdateParentInfoRequest>()
+                store.updateParentInfo(req.parentDeviceId, req.phoneNumber, req.displayName)
+                call.respond(HttpStatusCode.OK, mapOf("status" to "ok"))
+            }
+            get("/parent-info/{parentDeviceId}") {
+                val parentDeviceId = call.parameters["parentDeviceId"] ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Missing parentDeviceId"))
+                val (phone, name) = store.getParentInfo(parentDeviceId)
+                call.respond(HttpStatusCode.OK, mapOf("phoneNumber" to phone, "displayName" to name))
             }
         }
     }

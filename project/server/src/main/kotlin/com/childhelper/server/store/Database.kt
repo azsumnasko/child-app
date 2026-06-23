@@ -25,6 +25,8 @@ object Database {
                         parent_device_id TEXT,
                         child_public_key TEXT NOT NULL,
                         parent_public_key TEXT,
+                        parent_phone_number TEXT,
+                        parent_display_name TEXT,
                         status TEXT NOT NULL DEFAULT 'PENDING',
                         created_at INTEGER NOT NULL,
                         expires_at INTEGER NOT NULL

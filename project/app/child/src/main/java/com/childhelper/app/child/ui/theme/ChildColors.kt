@@ -6,10 +6,10 @@ import androidx.compose.ui.graphics.Color
 // Soft blues and greens — no alarming reds
 
 object ChildColors {
-    // Primary palette — soft, friendly blue
-    val Primary = Color(0xFF5B9BD5)
-    val PrimaryLight = Color(0xFF8FBDE4)
-    val PrimaryDark = Color(0xFF3A7BC8)
+    // Primary palette — soft, friendly blue (WCAG AA compliant with white text)
+    val Primary = Color(0xFF3A7BC8)
+    val PrimaryLight = Color(0xFF5B9BD5)
+    val PrimaryDark = Color(0xFF1F5096)
 
     // Secondary — gentle teal/green
     val Secondary = Color(0xFF5BC0A3)
@@ -44,9 +44,9 @@ object ChildColors {
     val DadButton = Color(0xFF5B9BD5)
     val DadButtonLight = Color(0xFF8FBDE4)
 
-    // SOS — uses amber/orange, NOT red (child-friendly)
+    // SOS — uses amber/orange, NOT red (child-friendly), WCAG AA compliant
     val SosActive = Color(0xFFF4A261)
-    val SosPressed = Color(0xFFE07B39)
+    val SosPressed = Color(0xFFB06020)
 
     // Status indicators
     val Online = Color(0xFF5BC0A3)

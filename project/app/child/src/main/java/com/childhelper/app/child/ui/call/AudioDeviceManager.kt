@@ -28,7 +28,7 @@ class AudioDeviceManager(
 
     private var localAudioSource: AudioSource? = null
     private var localAudioTrack: AudioTrack? = null
-    private val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+    private val audioManager: AudioManager? = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
 
     /**
      * Previous [AudioManager] mode saved before entering a call so it can be restored.
@@ -76,7 +76,11 @@ class AudioDeviceManager(
         localAudioTrack = audioTrack
         audioTrack.setEnabled(true)
 
-        peerConnection?.addTrack(audioTrack, listOf("stream0"))
+        val sender = peerConnection?.addTrack(audioTrack, listOf("stream0"))
+        android.util.Log.e("AudioDM", "addTrack returned sender=${sender != null}")
+        if (sender == null) {
+            android.util.Log.e("AudioDM", "WARNING: addTrack returned null — audio NOT sent!")
+        }
 
         // Configure AudioManager for VoIP
         configureAudioManagerForCall()
@@ -142,42 +146,28 @@ class AudioDeviceManager(
      *                `false` to route through the earpiece.
      */
     fun setSpeakerphoneEnabled(enabled: Boolean) {
-        audioManager.isSpeakerphoneOn = enabled
+        audioManager?.isSpeakerphoneOn = enabled
     }
 
-    /**
-     * Check whether speakerphone is currently enabled.
-     *
-     * @return `true` if audio is routed through the speakerphone.
-     */
-    fun isSpeakerphoneOn(): Boolean = audioManager.isSpeakerphoneOn
+    fun isSpeakerphoneOn(): Boolean = audioManager?.isSpeakerphoneOn ?: false
 
-    /**
-     * Configure the [AudioManager] for an active VoIP call:
-     * - Sets mode to [AudioManager.MODE_IN_COMMUNICATION]
-     * - Enables speakerphone by default (so the child can hear the guardian)
-     * - Saves previous state for restoration in [restoreAudioManager]
-     */
     private fun configureAudioManagerForCall() {
+        val am = audioManager ?: return
         try {
-            previousAudioMode = audioManager.mode
-            wasSpeakerphoneOn = audioManager.isSpeakerphoneOn
+            previousAudioMode = am.mode
+            wasSpeakerphoneOn = am.isSpeakerphoneOn
 
-            audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-            audioManager.isSpeakerphoneOn = true
+            am.mode = AudioManager.MODE_IN_COMMUNICATION
         } catch (e: SecurityException) {
-            // Some devices require MODIFY_AUDIO_SETTINGS permission
             android.util.Log.w("AudioDeviceManager", "Could not configure AudioManager", e)
         }
     }
 
-    /**
-     * Restore the [AudioManager] to its pre-call state.
-     */
     private fun restoreAudioManager() {
+        val am = audioManager ?: return
         try {
-            audioManager.isSpeakerphoneOn = wasSpeakerphoneOn
-            audioManager.mode = previousAudioMode
+            am.isSpeakerphoneOn = wasSpeakerphoneOn
+            am.mode = previousAudioMode
         } catch (e: SecurityException) {
             android.util.Log.w("AudioDeviceManager", "Could not restore AudioManager", e)
         }

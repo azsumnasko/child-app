@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -49,6 +50,7 @@ import androidx.navigation.NavController
 import android.content.Context
 import androidx.compose.ui.platform.LocalContext
 import com.childhelper.app.child.ui.theme.ChildColors
+import com.childhelper.app.child.R
 import com.childhelper.core.security.SecurePreferences
 
 @Composable
@@ -206,7 +208,7 @@ private fun NotifyingContent() {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Alert is being sent to your emergency contacts",
+            text = stringResource(R.string.sos_alert_sending),
             fontSize = 16.sp,
             color = Color.White.copy(alpha = 0.7f),
             textAlign = TextAlign.Center
@@ -216,9 +218,10 @@ private fun NotifyingContent() {
 
 @Composable
 private fun NotifiedContent(onBack: () -> Unit) {
+    val notifiedCd = stringResource(R.string.sos_guardians_notified_cd)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.semantics { contentDescription = "Guardians have been notified. Help is on the way." }
+        modifier = Modifier.semantics { contentDescription = notifiedCd }
     ) {
         Box(
             modifier = Modifier
@@ -238,7 +241,7 @@ private fun NotifiedContent(onBack: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
-            text = "Help is on the way",
+            text = stringResource(R.string.sos_help_coming),
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             color = ChildColors.Secondary,
@@ -248,7 +251,7 @@ private fun NotifiedContent(onBack: () -> Unit) {
         Spacer(modifier = Modifier.height(8.dp))
 
         Text(
-            text = "Your guardians have been notified. Stay calm and wait for them.",
+            text = stringResource(R.string.sos_guardians_notified_body),
             fontSize = 16.sp,
             color = Color.White.copy(alpha = 0.7f),
             textAlign = TextAlign.Center

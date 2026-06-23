@@ -20,6 +20,7 @@ data class SdpMessage(
     override val toDeviceId: String,
     override val timestamp: Long,
     override val sessionId: String,
+    @SerialName("sdpType")
     val type: SdpType,
     val sdp: String
 ) : SignalingMessage()

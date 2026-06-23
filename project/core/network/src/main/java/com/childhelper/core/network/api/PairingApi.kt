@@ -117,4 +117,9 @@ interface PairingApi {
     suspend fun registerFcmToken(
         @Body body: kotlinx.serialization.json.JsonObject
     )
+
+    @GET("/api/v1/pairing/parent-info/{parentDeviceId}")
+    suspend fun getParentInfo(
+        @Path("parentDeviceId") parentDeviceId: String
+    ): kotlinx.serialization.json.JsonObject
 }

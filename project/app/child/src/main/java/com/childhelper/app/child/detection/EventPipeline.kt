@@ -25,8 +25,7 @@ import kotlinx.coroutines.sync.withPermit
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
 
-/**
- * Central event pipeline that collects all detection events and emits metadata-only alerts.
+/** Central event pipeline that collects all detection events and emits metadata-only alerts.
  *
  * Privacy Guarantee:
  * - ALL alerts contain ONLY metadata (event type, timestamp, confidence, device status)
@@ -376,24 +375,27 @@ class EventPipeline(
         }
     }
 
-    /**
-     * Get current monitor mode.
-     */
-    private fun getMonitorMode(): MonitorMode {
-        // In production, this would check the current mode from preferences or state
-        return MonitorMode.IDLE
+    @Volatile
+    private var currentMonitorMode: MonitorMode = MonitorMode.IDLE
+
+    fun setMonitorMode(mode: MonitorMode) {
+        currentMonitorMode = mode
     }
+
+    private fun getMonitorMode(): MonitorMode = currentMonitorMode
 
     private suspend fun getDeviceId(): String {
         return securePreferences.getString("device_id", "child_device") ?: "child_device"
     }
 
-    /** Synchronous device ID fallback for callers that cannot suspend. */
+    /** Synchronous device ID fallback for callers that cannot suspend. Cached after first read. */
+    @Volatile
+    private var cachedDeviceId: String? = null
+
     private fun getDeviceIdSync(): String {
-        // Best-effort synchronous read — in practice the device ID is cached
-        // in secure preferences and available immediately.
+        cachedDeviceId?.let { return it }
         return try {
-            kotlinx.coroutines.runBlocking { getDeviceId() }
+            kotlinx.coroutines.runBlocking { getDeviceId() }.also { cachedDeviceId = it }
         } catch (e: Exception) {
             "child_device"
         }

@@ -3,6 +3,8 @@ package com.childhelper.app.child.ui.call
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
+import com.childhelper.app.child.detection.CameraPipeline
+import com.childhelper.app.child.service.MonitoringCoordinator
 import com.childhelper.core.common.model.CallSession
 import com.childhelper.core.common.model.CallStatus
 import com.childhelper.core.network.api.PairingApi
@@ -74,7 +76,10 @@ class CallManager(
     private val peerConnectionManager: WebRtcPeerConnectionManager,
     private val cameraCaptureManager: CameraCaptureManager,
     private val audioDeviceManager: AudioDeviceManager,
-    private val pairingApi: PairingApi
+    private val pairingApi: PairingApi,
+    private val monitoringCoordinator: MonitoringCoordinator,
+    private val cameraPipeline: CameraPipeline,
+    private val cameraXVideoCapturer: CameraXVideoCapturer
 ) {
 
     private val _callState = MutableStateFlow<CallState>(CallState.Idle)
@@ -89,6 +94,13 @@ class CallManager(
     private val _isAudioOnly = MutableStateFlow(false)
     val isAudioOnly: StateFlow<Boolean> = _isAudioOnly.asStateFlow()
 
+    private val offerMutex = kotlinx.coroutines.sync.Mutex()
+    private var isHandlingOffer = false
+
+    private fun trace(msg: String) {
+        // Production: no file logging
+    }
+
     private val _connectionEvents = MutableSharedFlow<ConnectionEvent>()
     val connectionEvents: Flow<ConnectionEvent> = _connectionEvents.asSharedFlow()
 
@@ -102,8 +114,21 @@ class CallManager(
     private val handler = Handler(Looper.getMainLooper())
 
     init {
+        trace("CallManager.init START")
         scope.launch {
+            trace("CallManager: incomingOffers collector STARTED")
             signalingClient.incomingOffers.collect { sdpMessage ->
+                if (isHandlingOffer) {
+                    trace("CallManager: SKIPPING duplicate offer session=${sdpMessage.sessionId}")
+                    return@collect
+                }
+                val currentState = _callState.value
+                if (currentState is CallState.Connecting || currentState is CallState.Connected || currentState is CallState.Ringing || currentState is CallState.Incoming) {
+                    trace("CallManager: ignoring stale offer while in state $currentState")
+                    return@collect
+                }
+                isHandlingOffer = true
+                trace("CallManager: GOT OFFER from=${sdpMessage.fromDeviceId} session=${sdpMessage.sessionId}")
                 handleIncomingOffer(
                     sdpMessage.sessionId,
                     sdpMessage.fromDeviceId,
@@ -113,6 +138,7 @@ class CallManager(
         }
         scope.launch {
             signalingClient.incomingIceCandidates.collect { iceMessage ->
+                if (iceMessage.sessionId != _currentSession.value?.sessionId) return@collect
                 peerConnectionManager.addIceCandidate(
                     IceCandidate(iceMessage.sdpMid, iceMessage.sdpMLineIndex, iceMessage.candidate)
                 )
@@ -120,9 +146,14 @@ class CallManager(
         }
         scope.launch {
             signalingClient.incomingAnswers.collect { answer ->
-                peerConnectionManager.setRemoteDescription(
-                    SessionDescription(SessionDescription.Type.ANSWER, answer.sdp)
-                )
+                if (answer.sessionId != _currentSession.value?.sessionId) return@collect
+                try {
+                    peerConnectionManager.setRemoteDescription(
+                        SessionDescription(SessionDescription.Type.ANSWER, answer.sdp)
+                    )
+                } catch (e: Exception) {
+                    trace("incomingAnswers: setRemoteDescription FAILED: ${e.message}")
+                }
             }
         }
     }
@@ -142,10 +173,13 @@ class CallManager(
      * @param hasVideo Whether to include video in the call
      */
     fun initiateCall(toDeviceId: String, hasVideo: Boolean = true) {
+        trace("initiateCall START toDeviceId=$toDeviceId hasVideo=$hasVideo")
         scope.launch {
             try {
+                trace("initiateCall: init WebRTC...")
                 initializeWebRtc()
                 val childDeviceId = getChildDeviceId()
+                trace("initiateCall: childId=$childDeviceId")
 
                 val session = CallSession(
                     callerId = childDeviceId,
@@ -158,26 +192,17 @@ class CallManager(
                 _isAudioOnly.value = !hasVideo
                 _callState.value = CallState.Connecting(session.sessionId)
 
-                val turnCreds = try {
-                    pairingApi.getTurnCredentials()
-                } catch (e: Exception) {
-                    null
-                }
-
                 val iceServers = mutableListOf<PeerConnection.IceServer>(
-                    PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
+                    PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
+                    PeerConnection.IceServer.builder("turn:openrelay.metered.ca:443?transport=tcp")
+                        .setUsername("openrelayproject")
+                        .setPassword("openrelayproject")
+                        .createIceServer(),
+                    PeerConnection.IceServer.builder("turn:openrelay.metered.ca:80?transport=tcp")
+                        .setUsername("openrelayproject")
+                        .setPassword("openrelayproject")
+                        .createIceServer()
                 )
-
-                turnCreds?.let { creds ->
-                    creds.urls.forEach { url ->
-                        iceServers.add(
-                            PeerConnection.IceServer.builder(url)
-                                .setUsername(creds.username)
-                                .setPassword(creds.password)
-                                .createIceServer()
-                        )
-                    }
-                }
 
                 val pc = createPeerConnectionWithListener(iceServers)
 
@@ -189,23 +214,47 @@ class CallManager(
                 val eglBase = peerConnectionManager.getEglBase()
 
                 if (!hasVideo) {
+                    trace("initiateCall: audio-only mode")
                     audioDeviceManager.startAudioCapture(factory, pc)
                 } else {
-                    cameraCaptureManager.startCapture(factory, eglBase, pc)
+                    trace("initiateCall: suspending monitoring camera...")
+                    monitoringCoordinator.suspendCameraForCall()
+                    trace("initiateCall: starting camera + audio via CameraX")
+                    val lifecycleOwner = cameraPipeline.getSavedLifecycleOwner()
+                    try {
+                        val videoTrack = cameraXVideoCapturer.startCapture(factory, eglBase, lifecycleOwner)
+                        if (videoTrack != null) {
+                            cameraCaptureManager.startCaptureFromVideoTrack(videoTrack, pc)
+                            trace("initiateCall: CAMERA started, sender=${cameraCaptureManager.currentRtpSender != null}")
+                        } else {
+                            trace("initiateCall: camera failed, audio-only")
+                        }
+                    } catch (e: Exception) {
+                        trace("initiateCall: camera exception ${e.message}, audio-only")
+                    }
                     audioDeviceManager.startAudioCapture(factory, pc)
                 }
 
                 // Create and send offer via signaling (off main thread to avoid ANR)
+                trace("initiateCall: creating offer...")
                 val offer = withContext(Dispatchers.IO) { peerConnectionManager.createOffer() }
-                signalingClient.sendOffer(
+                trace("initiateCall: offer created, sending to $toDeviceId...")
+                val offerResult = signalingClient.sendOffer(
                     sessionId = session.sessionId,
                     toDeviceId = toDeviceId,
                     sessionDescription = offer
-                ).getOrThrow()
+                )
+                if (offerResult.isFailure) {
+                    trace("initiateCall: send offer FAILED: ${offerResult.exceptionOrNull()?.message}")
+                    _callState.value = CallState.Error("Failed to send offer")
+                    return@launch
+                }
+                trace("initiateCall: offer SENT, waiting for answer...")
 
                 _callState.value = CallState.Ringing(session.sessionId)
                 _currentSession.value = session.copy(status = CallStatus.RINGING)
             } catch (e: Exception) {
+                trace("initiateCall: FAILED - ${e.javaClass.simpleName}: ${e.message}")
                 _callState.value = CallState.Error(e.message ?: "Failed to initiate call")
                 cleanup()
             }
@@ -218,17 +267,27 @@ class CallManager(
      * @param sessionId The session ID of the incoming call
      */
     fun acceptCall(sessionId: String) {
+        trace("acceptCall ENTER session=$sessionId")
         scope.launch {
             try {
+                trace("acceptCall: creating answer...")
                 _callState.value = CallState.Connecting(sessionId)
 
                 val answer = withContext(Dispatchers.IO) { peerConnectionManager.createAnswer() }
+                trace("acceptCall: answer SDP:\n${answer.description.take(2000)}")
+                trace("acceptCall: answer created, sending...")
                 val callerId = _currentSession.value?.callerId ?: return@launch
-                signalingClient.sendAnswer(
+                val answerResult = signalingClient.sendAnswer(
                     sessionId = sessionId,
                     toDeviceId = callerId,
                     sessionDescription = answer
-                ).getOrThrow()
+                )
+                if (answerResult.isFailure) {
+                    trace("acceptCall: SEND FAILED ${answerResult.exceptionOrNull()?.javaClass?.simpleName}: ${answerResult.exceptionOrNull()?.message}")
+                    _callState.value = CallState.Error("Failed to send answer")
+                    return@launch
+                }
+                trace("acceptCall: answer SENT OK")
 
                 _currentSession.value?.let { session ->
                     _currentSession.value = session.copy(
@@ -254,9 +313,12 @@ class CallManager(
      * @param offer The remote SDP offer [SessionDescription].
      */
     fun handleIncomingOffer(sessionId: String, callerId: String, offer: SessionDescription) {
+        trace("handleIncomingOffer ENTER session=$sessionId caller=$callerId")
         scope.launch {
             try {
+                trace("handleIncomingOffer: cleanup...")
                 cleanup() // Dispose any existing call before starting new one
+                trace("handleIncomingOffer: init WebRTC...")
                 initializeWebRtc()
                 val childDeviceId = getChildDeviceId()
 
@@ -267,46 +329,87 @@ class CallManager(
                 }
 
                 val iceServers = mutableListOf<PeerConnection.IceServer>(
-                    PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer()
+                    PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
+                    PeerConnection.IceServer.builder("turn:openrelay.metered.ca:443?transport=tcp")
+                        .setUsername("openrelayproject")
+                        .setPassword("openrelayproject")
+                        .createIceServer(),
+                    PeerConnection.IceServer.builder("turn:openrelay.metered.ca:80?transport=tcp")
+                        .setUsername("openrelayproject")
+                        .setPassword("openrelayproject")
+                        .createIceServer()
                 )
-                turnCreds?.let { creds ->
-                    creds.urls.forEach { url ->
-                        iceServers.add(
-                            PeerConnection.IceServer.builder(url)
-                                .setUsername(creds.username)
-                                .setPassword(creds.password)
-                                .createIceServer()
-                        )
-                    }
-                }
+                trace("handleIncomingOffer: ICE servers built (${iceServers.size})")
 
                 val session = CallSession(
+                    sessionId = sessionId,
                     callerId = callerId,
                     calleeId = childDeviceId,
                     hasVideo = true,
                     status = CallStatus.CONNECTING
                 )
-
-                createPeerConnectionWithListener(iceServers)
-
                 _currentSession.value = session
-                _callState.value = CallState.Incoming(sessionId, callerId)
+                trace("handleIncomingOffer: creating PC...")
+                createPeerConnectionWithListener(iceServers)
+                trace("handleIncomingOffer: PC created")
 
-                setRemoteDescription(offer)
+                _callState.value = CallState.Incoming(sessionId, callerId)
+                trace("handleIncomingOffer: setting remote description... sdpLen=${offer.description.length}")
+                trace("handleIncomingOffer: offer SDP:\n${offer.description.take(2000)}")
+                try {
+                    setRemoteDescription(offer)
+                    trace("handleIncomingOffer: remote description SET OK")
+                } catch (e: Exception) {
+                    trace("handleIncomingOffer: setRemoteDescription FAILED ${e.javaClass.simpleName}: ${e.message}")
+                    _callState.value = CallState.Error("SDP negotiation failed: ${e.message}")
+                    return@launch
+                }
+
+                // Suspend motion detection (ImageAnalysis only, keep camera open for Preview)
+                trace("handleIncomingOffer: suspending ImageAnalysis...")
+                monitoringCoordinator.suspendCameraForCall()
+                trace("handleIncomingOffer: ImageAnalysis suspended")
 
                 val factory = peerConnectionManager.getPeerConnectionFactory()
                 if (factory == null) {
                     _callState.value = CallState.Error("Camera initialization failed. Please restart the app.")
+                    monitoringCoordinator.resumeCameraAfterCall()
                     return@launch
                 }
                 val eglBase = peerConnectionManager.getEglBase()
-                cameraCaptureManager.startCapture(factory, eglBase, peerConnectionManager.getPeerConnection())
-                audioDeviceManager.startAudioCapture(factory, peerConnectionManager.getPeerConnection())
+                val pc = peerConnectionManager.getPeerConnection()
+                trace("handleIncomingOffer: got PC=${pc != null}, starting camera + audio...")
 
+                val lifecycleOwner = cameraPipeline.getSavedLifecycleOwner()
+                trace("handleIncomingOffer: lifecycleOwner=${lifecycleOwner != null}")
+                try {
+                    val videoTrack = cameraXVideoCapturer.startCapture(factory, eglBase, lifecycleOwner)
+                    if (videoTrack != null) {
+                        cameraCaptureManager.startCaptureFromVideoTrack(videoTrack, pc)
+                        val senderOk = cameraCaptureManager.currentRtpSender != null
+                        _isAudioOnly.value = !senderOk
+                        trace("handleIncomingOffer: CAMERA started, sender=$senderOk")
+                    } else {
+                        _isAudioOnly.value = true
+                        trace("handleIncomingOffer: camera failed (no track), audio-only")
+                    }
+                } catch (e: Exception) {
+                    _isAudioOnly.value = true
+                    trace("handleIncomingOffer: camera exception ${e.message}, audio-only")
+                }
+
+                audioDeviceManager.startAudioCapture(factory, pc)
+                trace("handleIncomingOffer: audio started, track=${audioDeviceManager.currentAudioTrack != null}")
+
+                trace("handleIncomingOffer: calling acceptCall...")
                 acceptCall(sessionId)
+                trace("handleIncomingOffer: acceptCall returned")
             } catch (e: Exception) {
+                trace("handleIncomingOffer: FAILED ${e.javaClass.simpleName}: ${e.message}")
                 _callState.value = CallState.Error(e.message ?: "Failed to handle incoming call")
                 cleanup()
+            } finally {
+                isHandlingOffer = false
             }
         }
     }
@@ -329,6 +432,11 @@ class CallManager(
         _callState.value = CallState.Ended(sessionId ?: "")
 
         cleanup()
+
+        // Resume monitoring camera after call ends
+        cameraXVideoCapturer.stopCapture()
+        cameraPipeline.unbindPreview()
+        monitoringCoordinator.resumeCameraAfterCall()
 
         scope.launch {
             try {
@@ -426,7 +534,7 @@ class CallManager(
      *
      * @param sdp The remote [SessionDescription].
      */
-    fun setRemoteDescription(sdp: SessionDescription) {
+    suspend fun setRemoteDescription(sdp: SessionDescription) {
         peerConnectionManager.setRemoteDescription(sdp)
     }
 
@@ -450,8 +558,9 @@ class CallManager(
      */
     fun cleanup() {
         stopAdaptiveBitrate()
+        cameraXVideoCapturer.stopCapture()
         cameraCaptureManager.clearRtpSender()
-        cameraCaptureManager.stopCapture()
+        cameraCaptureManager.stopCaptureInternal()
         audioDeviceManager.stopAudioCapture()
         peerConnectionManager.closeConnection()
         _remoteVideoTrack.value = null
@@ -511,20 +620,32 @@ class CallManager(
 
             override fun onIceCandidate(candidate: IceCandidate) {
                 scope.launch {
-                    val session = _currentSession.value ?: return@launch
-                    val childDeviceId = getChildDeviceId()
-                    val toDeviceId = if (session.callerId == childDeviceId) session.calleeId else session.callerId
-                    signalingClient.sendIceCandidate(
-                        sessionId = session.sessionId,
-                        toDeviceId = toDeviceId,
-                        candidate = candidate
-                    ).getOrThrow()
+                    try {
+                        val session = _currentSession.value ?: return@launch
+                        val childDeviceId = getChildDeviceId()
+                        val toDeviceId = if (session.callerId == childDeviceId) session.calleeId else session.callerId
+                        val iceResult = signalingClient.sendIceCandidate(
+                            sessionId = session.sessionId,
+                            toDeviceId = toDeviceId,
+                            candidate = candidate
+                        )
+                        if (iceResult.isFailure) {
+                            android.util.Log.w("CallManager", "Failed to send ICE candidate", iceResult.exceptionOrNull())
+                        }
+                    } catch (e: Exception) {
+                        android.util.Log.w("CallManager", "ICE candidate send error", e)
+                    }
                 }
             }
 
             override fun onAddStream(stream: MediaStream) {
                 stream.videoTracks.firstOrNull()?.let { track ->
                     handler.post { _remoteVideoTrack.value = track }
+                }
+                stream.audioTracks.firstOrNull()?.let { track ->
+                    track.setEnabled(true)
+                    track.setVolume(1.0)
+                    trace("onAddStream: AudioTrack received id=${track.id()}")
                 }
             }
 
@@ -537,8 +658,13 @@ class CallManager(
                 streams: Array<out MediaStream>?
             ) {
                 receiver?.track()?.let { track ->
-                    if (track is VideoTrack) {
-                        handler.post { _remoteVideoTrack.value = track }
+                    when (track) {
+                        is VideoTrack -> handler.post { _remoteVideoTrack.value = track }
+                        is org.webrtc.AudioTrack -> {
+                            track.setEnabled(true)
+                            track.setVolume(1.0)
+                            trace("onAddTrack: AudioTrack received id=${track.id()}")
+                        }
                     }
                 }
             }

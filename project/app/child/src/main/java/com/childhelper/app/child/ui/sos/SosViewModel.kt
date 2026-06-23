@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.childhelper.app.child.ui.bedtime.VoicePromptManager
+import com.childhelper.app.child.R
 import com.childhelper.core.security.SecurePreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -56,7 +57,7 @@ class SosViewModel @Inject constructor(
     }
 
     private fun speakSosPrompt() {
-        voicePromptManager.speak("SOS activated. Help is being notified. Stay calm.")
+        voicePromptManager.speak(getApplication<Application>().getString(R.string.sos_voice_prompt))
     }
 
     fun onSosConfirmed(childDeviceId: String) {
@@ -74,12 +75,12 @@ class SosViewModel @Inject constructor(
             }
 
             _uiState.update { it.copy(countdown = 0, isNotifying = true) }
-            voicePromptManager.speak("Notifying guardians now.")
+            voicePromptManager.speak(getApplication<Application>().getString(R.string.sos_notifying_voice))
 
-            sosManager.activateSos(childDeviceId)
+            sosManager.activateSos(deviceId)
 
             _uiState.update { it.copy(isNotifying = false, notified = true) }
-            voicePromptManager.speak("Guardians have been notified. Help is on the way.")
+            voicePromptManager.speak(getApplication<Application>().getString(R.string.sos_notified_voice))
         }
     }
 
@@ -87,7 +88,7 @@ class SosViewModel @Inject constructor(
         countdownJob?.cancel()
         countdownJob = null
         sosManager.cancelSos()
-        voicePromptManager.speak("SOS cancelled.")
+        voicePromptManager.speak(getApplication<Application>().getString(R.string.sos_cancelled_voice))
         _navigationEvent.value = SosNavigationEvent.NavigateBack
     }
 

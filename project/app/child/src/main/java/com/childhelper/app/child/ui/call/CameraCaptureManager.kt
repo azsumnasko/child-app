@@ -39,6 +39,7 @@ class CameraCaptureManager(
     private var localVideoSource: VideoSource? = null
     private var localVideoTrack: VideoTrack? = null
     private var videoRtpSender: RtpSender? = null
+    private var ownsVideoTrack: Boolean = false
     private val handler = Handler(Looper.getMainLooper())
 
     /**
@@ -50,6 +51,25 @@ class CameraCaptureManager(
      * Return the current [RtpSender] for the video track, or null.
      */
     val currentRtpSender: RtpSender? get() = videoRtpSender
+
+    /**
+     * Adopt a pre-created [VideoTrack] (from CameraXVideoCapturer) and add it
+     * to the peer connection. This replaces the Camera2-based [startCapture]
+     * path for the CameraX-shared-camera architecture.
+     *
+     * @param videoTrack The [VideoTrack] created externally (e.g. by CameraXVideoCapturer).
+     * @param peerConnection The peer connection to add the video track to.
+     */
+    fun startCaptureFromVideoTrack(
+        videoTrack: VideoTrack,
+        peerConnection: org.webrtc.PeerConnection?
+    ) {
+        stopCapture()
+        localVideoTrack = videoTrack
+        videoTrack.setEnabled(true)
+        videoRtpSender = peerConnection?.addTrack(videoTrack, listOf("stream0"))
+        android.util.Log.e("CameraCapture", "addTrack video sender=${videoRtpSender != null}")
+    }
 
     /**
      * Start local video capture and add the video track to the peer connection.
@@ -68,7 +88,7 @@ class CameraCaptureManager(
         eglBase: EglBase?,
         peerConnection: org.webrtc.PeerConnection?
     ) {
-        stopCapture()
+        stopCaptureInternal()
 
         try {
             val cameraEnumerator = Camera2Enumerator(context)
@@ -89,6 +109,7 @@ class CameraCaptureManager(
 
                 val videoSource = peerConnectionFactory.createVideoSource(capturer.isScreencast)
                 localVideoSource = videoSource
+                ownsVideoTrack = true
                 capturer.initialize(
                     surfaceTextureHelper,
                     context,
@@ -124,16 +145,41 @@ class CameraCaptureManager(
                 surfaceTextureHelper?.dispose()
                 surfaceTextureHelper = null
 
-                localVideoTrack?.dispose()
+                if (ownsVideoTrack) {
+                    localVideoTrack?.dispose()
+                }
                 localVideoTrack = null
 
                 localVideoSource?.dispose()
                 localVideoSource = null
 
                 videoRtpSender = null
+                ownsVideoTrack = false
             } catch (e: Exception) {
-                // Best effort cleanup
             }
+        }
+    }
+
+    fun stopCaptureInternal() {
+        try {
+            videoCapturer?.stopCapture()
+            videoCapturer?.dispose()
+            videoCapturer = null
+
+            surfaceTextureHelper?.dispose()
+            surfaceTextureHelper = null
+
+            if (ownsVideoTrack) {
+                localVideoTrack?.dispose()
+            }
+            localVideoTrack = null
+
+            localVideoSource?.dispose()
+            localVideoSource = null
+
+            videoRtpSender = null
+            ownsVideoTrack = false
+        } catch (e: Exception) {
         }
     }
 
