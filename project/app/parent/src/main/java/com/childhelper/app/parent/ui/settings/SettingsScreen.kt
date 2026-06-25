@@ -15,11 +15,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Sensors
 import androidx.compose.material.icons.filled.Settings
@@ -34,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
@@ -61,6 +64,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -116,6 +120,20 @@ fun SettingsScreen(
         }
     }
 
+    LaunchedEffect(uiState.profileSaveState) {
+        when (uiState.profileSaveState) {
+            ProfileSaveState.Saved -> {
+                snackbarHostState.showSnackbar(context.getString(R.string.settings_profile_saved))
+                viewModel.resetProfileSaveState()
+            }
+            ProfileSaveState.Error -> {
+                snackbarHostState.showSnackbar(context.getString(R.string.settings_profile_error))
+                viewModel.resetProfileSaveState()
+            }
+            else -> {}
+        }
+    }
+
     // Delete confirmation dialog
     if (uiState.showDeleteConfirmation) {
         DataDeletionConfirmationDialog(
@@ -158,6 +176,62 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Spacer(modifier = Modifier.height(8.dp))
+
+            // Parent Profile Section (Mom + Dad phone numbers for child PSTN fallback)
+            SettingsSection(
+                icon = Icons.Default.Person,
+                title = stringResource(R.string.settings_section_profile)
+            ) {
+                if (!uiState.isPaired) {
+                    Text(
+                        text = stringResource(R.string.settings_profile_pair_first),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = uiState.momName,
+                        onValueChange = { viewModel.setMomName(it) },
+                        label = { Text(stringResource(R.string.settings_profile_mom_name)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = uiState.momPhone,
+                        onValueChange = { viewModel.setMomPhone(it) },
+                        label = { Text(stringResource(R.string.settings_profile_mom_phone)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = uiState.dadName,
+                        onValueChange = { viewModel.setDadName(it) },
+                        label = { Text(stringResource(R.string.settings_profile_dad_name)) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = uiState.dadPhone,
+                        onValueChange = { viewModel.setDadPhone(it) },
+                        label = { Text(stringResource(R.string.settings_profile_dad_phone)) },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(
+                        onClick = { viewModel.saveParentProfile() },
+                        enabled = uiState.profileSaveState != ProfileSaveState.Saving,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(stringResource(R.string.settings_profile_save))
+                    }
+                }
+            }
 
             // Detection Settings Section
             SettingsSection(

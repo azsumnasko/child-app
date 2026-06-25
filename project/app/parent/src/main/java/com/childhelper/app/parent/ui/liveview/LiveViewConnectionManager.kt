@@ -266,13 +266,30 @@ class LiveViewConnectionManager(
         eglBase?.release(); eglBase = null
     }
 
-    private fun buildIceServers(): List<PeerConnection.IceServer> = listOf(
-        PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
-        PeerConnection.IceServer.builder("turn:openrelay.metered.ca:443?transport=tcp")
-            .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer(),
-        PeerConnection.IceServer.builder("turn:openrelay.metered.ca:80?transport=tcp")
-            .setUsername("openrelayproject").setPassword("openrelayproject").createIceServer()
-    )
+    private suspend fun buildIceServers(): List<PeerConnection.IceServer> {
+        val servers = mutableListOf<PeerConnection.IceServer>()
+
+        try {
+            val creds = pairingApi.getTurnCredentials()
+            creds.stunUrls.forEach { url ->
+                servers.add(PeerConnection.IceServer.builder(url).createIceServer())
+            }
+            creds.urls.forEach { url ->
+                servers.add(PeerConnection.IceServer.builder(url)
+                    .setUsername(creds.username)
+                    .setPassword(creds.password)
+                    .createIceServer())
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("LiveViewCM", "Failed to fetch TURN credentials, using fallback", e)
+            servers.add(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer())
+        }
+
+        if (servers.isEmpty()) {
+            servers.add(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer())
+        }
+        return servers
+    }
 
     private fun createPeerConnection(iceServers: List<PeerConnection.IceServer>): PeerConnection? {
         val factory = peerConnectionFactory ?: return null

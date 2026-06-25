@@ -122,4 +122,16 @@ interface PairingApi {
     suspend fun getParentInfo(
         @Path("parentDeviceId") parentDeviceId: String
     ): kotlinx.serialization.json.JsonObject
+
+    /**
+     * Updates the parent's profile (display names + PSTN phone numbers) on the server.
+     *
+     * The child app reads these via [getParentInfo] so its "Audio Mom" / "Audio Dad"
+     * buttons can place a real phone call as a fallback to the in-app WebRTC call.
+     *
+     * @param body JSON with parentDeviceId, momPhoneNumber, momDisplayName,
+     *        dadPhoneNumber, dadDisplayName.
+     */
+    @POST("/api/v1/pairing/parent-info")
+    suspend fun updateParentInfo(@Body body: kotlinx.serialization.json.JsonObject): kotlinx.serialization.json.JsonObject
 }

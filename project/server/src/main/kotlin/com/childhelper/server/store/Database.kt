@@ -32,6 +32,16 @@ object Database {
                         expires_at INTEGER NOT NULL
                     )
                 """)
+                // Idempotent column additions for the second guardian (Dad).
+                // SQLite has no ADD COLUMN IF NOT EXISTS; ignore "duplicate column name".
+                listOf(
+                    "parent_phone_number_dad TEXT",
+                    "parent_display_name_dad TEXT"
+                ).forEach { colDef ->
+                    try {
+                        stmt.execute("ALTER TABLE pairing_sessions ADD COLUMN $colDef")
+                    } catch (_: Exception) { /* column already exists */ }
+                }
                 stmt.execute("""
                     CREATE TABLE IF NOT EXISTS signaling_messages (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,

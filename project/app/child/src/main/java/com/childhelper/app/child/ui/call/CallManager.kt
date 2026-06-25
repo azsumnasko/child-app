@@ -192,17 +192,25 @@ class CallManager(
                 _isAudioOnly.value = !hasVideo
                 _callState.value = CallState.Connecting(session.sessionId)
 
-                val iceServers = mutableListOf<PeerConnection.IceServer>(
-                    PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
-                    PeerConnection.IceServer.builder("turn:openrelay.metered.ca:443?transport=tcp")
-                        .setUsername("openrelayproject")
-                        .setPassword("openrelayproject")
-                        .createIceServer(),
-                    PeerConnection.IceServer.builder("turn:openrelay.metered.ca:80?transport=tcp")
-                        .setUsername("openrelayproject")
-                        .setPassword("openrelayproject")
-                        .createIceServer()
-                )
+                val iceServers = mutableListOf<PeerConnection.IceServer>()
+                try {
+                    val creds = pairingApi.getTurnCredentials()
+                    creds.stunUrls.forEach { url ->
+                        iceServers.add(PeerConnection.IceServer.builder(url).createIceServer())
+                    }
+                    creds.urls.forEach { url ->
+                        iceServers.add(PeerConnection.IceServer.builder(url)
+                            .setUsername(creds.username)
+                            .setPassword(creds.password)
+                            .createIceServer())
+                    }
+                } catch (e: Exception) {
+                    android.util.Log.w("CallManager", "Failed to fetch TURN credentials, using fallback", e)
+                    iceServers.add(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer())
+                }
+                if (iceServers.isEmpty()) {
+                    iceServers.add(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer())
+                }
 
                 val pc = createPeerConnectionWithListener(iceServers)
 
@@ -328,17 +336,23 @@ class CallManager(
                     null
                 }
 
-                val iceServers = mutableListOf<PeerConnection.IceServer>(
-                    PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer(),
-                    PeerConnection.IceServer.builder("turn:openrelay.metered.ca:443?transport=tcp")
-                        .setUsername("openrelayproject")
-                        .setPassword("openrelayproject")
-                        .createIceServer(),
-                    PeerConnection.IceServer.builder("turn:openrelay.metered.ca:80?transport=tcp")
-                        .setUsername("openrelayproject")
-                        .setPassword("openrelayproject")
-                        .createIceServer()
-                )
+                val iceServers = mutableListOf<PeerConnection.IceServer>()
+                if (turnCreds != null) {
+                    turnCreds.stunUrls.forEach { url ->
+                        iceServers.add(PeerConnection.IceServer.builder(url).createIceServer())
+                    }
+                    turnCreds.urls.forEach { url ->
+                        iceServers.add(PeerConnection.IceServer.builder(url)
+                            .setUsername(turnCreds.username)
+                            .setPassword(turnCreds.password)
+                            .createIceServer())
+                    }
+                } else {
+                    iceServers.add(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer())
+                }
+                if (iceServers.isEmpty()) {
+                    iceServers.add(PeerConnection.IceServer.builder("stun:stun.l.google.com:19302").createIceServer())
+                }
                 trace("handleIncomingOffer: ICE servers built (${iceServers.size})")
 
                 val session = CallSession(

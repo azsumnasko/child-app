@@ -129,6 +129,38 @@ class PairingRepository @Inject constructor(
         }
     }
 
+    /**
+     * Pushes the parent's profile (Mom + Dad display names and PSTN phone numbers)
+     * to the server so the child app can place real phone calls.
+     *
+     * Called by the parent app after pairing. Uses this device's id as the parentDeviceId.
+     *
+     * @return [SafeResult.Success] on success, [SafeResult.Failure] on network/pairing error.
+     */
+    suspend fun updateParentInfo(
+        momPhoneNumber: String?,
+        momDisplayName: String?,
+        dadPhoneNumber: String?,
+        dadDisplayName: String?
+    ): SafeResult<Unit> {
+        val parentDeviceId = securePreferences.getString("device_id")
+            ?: return SafeResult.Failure("Not paired (missing device_id).", ErrorCode.PAIRING_ERROR)
+        val payload = buildJsonObject {
+            put("parentDeviceId", parentDeviceId)
+            put("momPhoneNumber", momPhoneNumber)
+            put("momDisplayName", momDisplayName)
+            put("dadPhoneNumber", dadPhoneNumber)
+            put("dadDisplayName", dadDisplayName)
+        }
+        val result = safeCallAsync(ErrorCode.NETWORK_ERROR) {
+            pairingApi.updateParentInfo(payload)
+        }
+        return when (result) {
+            is SafeResult.Success -> SafeResult.Success(Unit)
+            is SafeResult.Failure -> result
+        }
+    }
+
     suspend fun getPairingStatus(sessionId: String): SafeResult<PairingSession> {
         val result = safeCallAsync(ErrorCode.NETWORK_ERROR) {
             pairingApi.getPairingStatus(sessionId)

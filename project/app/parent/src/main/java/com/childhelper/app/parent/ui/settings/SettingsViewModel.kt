@@ -5,6 +5,8 @@ import androidx.lifecycle.viewModelScope
 import com.childhelper.app.parent.repository.AlertHistoryRepository
 import com.childhelper.core.common.model.RetentionPeriod
 import com.childhelper.core.common.model.SensitivityLevel
+import com.childhelper.core.common.util.SafeResult
+import com.childhelper.core.network.repository.PairingRepository
 import com.childhelper.core.security.LocaleManager
 import com.childhelper.core.security.SecurePreferences
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,8 +35,16 @@ data class SettingsUiState(
     val isLoading: Boolean = true,
     val showDeleteConfirmation: Boolean = false,
     val dataDeleted: Boolean = false,
-    val errorMessage: String? = null
+    val errorMessage: String? = null,
+    val isPaired: Boolean = false,
+    val momName: String = "",
+    val momPhone: String = "",
+    val dadName: String = "",
+    val dadPhone: String = "",
+    val profileSaveState: ProfileSaveState = ProfileSaveState.Idle
 )
+
+enum class ProfileSaveState { Idle, Saving, Saved, Error }
 
 /**
  * ViewModel for the settings screen.
@@ -43,7 +53,8 @@ data class SettingsUiState(
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val preferences: SecurePreferences,
-    private val alertRepository: AlertHistoryRepository
+    private val alertRepository: AlertHistoryRepository,
+    private val pairingRepository: PairingRepository
 ) : ViewModel() {
 
     private companion object {
@@ -56,6 +67,10 @@ class SettingsViewModel @Inject constructor(
         private const val KEY_SOS_ORDER = "sos_escalation_order"
         private const val DEFAULT_SENSITIVITY = "NORMAL"
         private const val DEFAULT_SOS_ORDER = ""
+        private const val KEY_PARENT_PHONE = "parent_phone_number"
+        private const val KEY_PARENT_NAME = "parent_display_name"
+        private const val KEY_DAD_PHONE = "parent_phone_number_dad"
+        private const val KEY_DAD_NAME = "parent_display_name_dad"
     }
 
     private val _sensitivity = MutableStateFlow(SensitivityLevel.NORMAL)
@@ -70,6 +85,13 @@ class SettingsViewModel @Inject constructor(
     private val _showDeleteConfirmation = MutableStateFlow(false)
     private val _dataDeleted = MutableStateFlow(false)
     private val _errorMessage = MutableStateFlow<String?>(null)
+
+    private val _isPaired = MutableStateFlow(false)
+    private val _momName = MutableStateFlow("")
+    private val _momPhone = MutableStateFlow("")
+    private val _dadName = MutableStateFlow("")
+    private val _dadPhone = MutableStateFlow("")
+    private val _profileSaveState = MutableStateFlow(ProfileSaveState.Idle)
 
     private val _languageChanged = MutableStateFlow(false)
     val languageChanged: StateFlow<Boolean> = _languageChanged.asStateFlow()
@@ -90,6 +112,11 @@ class SettingsViewModel @Inject constructor(
             val sosStr = preferences.getString(KEY_SOS_ORDER, DEFAULT_SOS_ORDER) ?: DEFAULT_SOS_ORDER
             _sosEscalationOrder.value = sosStr.split(",").filter { it.isNotBlank() }
             _selectedLanguage.value = preferences.getString(LocaleManager.PREF_KEY_LANGUAGE)
+            _isPaired.value = preferences.getBoolean("is_paired", false)
+            _momName.value = preferences.getString(KEY_PARENT_NAME) ?: ""
+            _momPhone.value = preferences.getString(KEY_PARENT_PHONE) ?: ""
+            _dadName.value = preferences.getString(KEY_DAD_NAME) ?: ""
+            _dadPhone.value = preferences.getString(KEY_DAD_PHONE) ?: ""
         }
     }
 
@@ -105,7 +132,13 @@ class SettingsViewModel @Inject constructor(
         _selectedLanguage,
         _showDeleteConfirmation,
         _dataDeleted,
-        _errorMessage
+        _errorMessage,
+        _isPaired,
+        _momName,
+        _momPhone,
+        _dadName,
+        _dadPhone,
+        _profileSaveState
     ) { values ->
         SettingsUiState(
             sensitivity = values[0] as SensitivityLevel,
@@ -120,7 +153,13 @@ class SettingsViewModel @Inject constructor(
             isLoading = false,
             showDeleteConfirmation = values[9] as Boolean,
             dataDeleted = values[10] as Boolean,
-            errorMessage = values[11] as String?
+            errorMessage = values[11] as String?,
+            isPaired = values[12] as Boolean,
+            momName = values[13] as String,
+            momPhone = values[14] as String,
+            dadName = values[15] as String,
+            dadPhone = values[16] as String,
+            profileSaveState = values[17] as ProfileSaveState
         )
     }.stateIn(
         scope = viewModelScope,
@@ -152,6 +191,39 @@ class SettingsViewModel @Inject constructor(
             _motionDetectionEnabled.value = enabled
         }
     }
+
+    // --- Parent Profile (Mom + Dad phone numbers for child PSTN fallback) ---
+
+    fun setMomName(value: String) { _momName.value = value }
+    fun setMomPhone(value: String) { _momPhone.value = value }
+    fun setDadName(value: String) { _dadName.value = value }
+    fun setDadPhone(value: String) { _dadPhone.value = value }
+
+    fun saveParentProfile() {
+        if (!_isPaired.value) {
+            _profileSaveState.value = ProfileSaveState.Error
+            return
+        }
+        _profileSaveState.value = ProfileSaveState.Saving
+        viewModelScope.launch {
+            preferences.putString(KEY_PARENT_NAME, _momName.value)
+            preferences.putString(KEY_PARENT_PHONE, _momPhone.value)
+            preferences.putString(KEY_DAD_NAME, _dadName.value)
+            preferences.putString(KEY_DAD_PHONE, _dadPhone.value)
+            val result = pairingRepository.updateParentInfo(
+                momPhoneNumber = _momPhone.value.ifBlank { null },
+                momDisplayName = _momName.value.ifBlank { null },
+                dadPhoneNumber = _dadPhone.value.ifBlank { null },
+                dadDisplayName = _dadName.value.ifBlank { null }
+            )
+            _profileSaveState.value = when (result) {
+                is SafeResult.Success -> ProfileSaveState.Saved
+                is SafeResult.Failure -> ProfileSaveState.Error
+            }
+        }
+    }
+
+    fun resetProfileSaveState() { _profileSaveState.value = ProfileSaveState.Idle }
 
     // --- Retention ---
 

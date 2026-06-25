@@ -1,5 +1,11 @@
 package com.childhelper.app.child.ui.home
 
+import android.Manifest
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,11 +42,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -49,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.childhelper.app.child.R
@@ -80,6 +91,38 @@ fun ChildHomeScreen(
     val uiState by viewModel.uiState.collectAsState()
     val navigationEvent by viewModel.navigationEvent.collectAsState()
     val batteryWhitelistEvent by viewModel.batteryWhitelistEvent.collectAsState()
+
+    val context = LocalContext.current
+    var pendingCallContact by remember { mutableStateOf<Contact?>(null) }
+
+    val callPhoneLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val contact = pendingCallContact
+        pendingCallContact = null
+        if (contact == null) return@rememberLauncherForActivityResult
+        val phone = contact.phoneNumber
+        if (granted) {
+            viewModel.onAudioCallClick(contact)
+        } else if (!phone.isNullOrBlank()) {
+            runCatching {
+                context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$phone")))
+            }
+        }
+    }
+
+    val placeAudioCall: (Contact) -> Unit = { contact ->
+        val phone = contact.phoneNumber
+        when {
+            phone.isNullOrBlank() -> viewModel.onAudioCallClick(contact)
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED ->
+                viewModel.onAudioCallClick(contact)
+            else -> {
+                pendingCallContact = contact
+                callPhoneLauncher.launch(Manifest.permission.CALL_PHONE)
+            }
+        }
+    }
 
     // Handle navigation events
     LaunchedEffect(navigationEvent) {
@@ -217,16 +260,10 @@ fun ChildHomeScreen(
             // Additional actions
             QuickActionsRow(
                 onAudioCallMom = {
-                    val contact = uiState.contacts.firstOrNull()
-                    if (contact != null) {
-                        viewModel.onAudioCallClick(contact)
-                    }
+                    uiState.contacts.firstOrNull { it.role == ContactRole.MOTHER }?.let(placeAudioCall)
                 },
                 onAudioCallDad = {
-                    val contact = uiState.contacts.firstOrNull()
-                    if (contact != null) {
-                        viewModel.onAudioCallClick(contact)
-                    }
+                    uiState.contacts.firstOrNull { it.role == ContactRole.FATHER }?.let(placeAudioCall)
                 },
                 onPairWithParent = { viewModel.onPairingClick() }
             )

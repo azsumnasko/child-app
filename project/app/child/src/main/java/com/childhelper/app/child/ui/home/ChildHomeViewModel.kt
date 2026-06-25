@@ -116,29 +116,42 @@ class ChildHomeViewModel @Inject constructor(
             val parentDeviceId = securePreferences.getString("paired_parent_device_id")
             val isPaired = securePreferences.getBoolean("is_paired", false)
             if (isPaired && parentDeviceId != null) {
-                // Try fetching parent info from server (phone, display name)
+                // Try fetching parent info from server (Mom + Dad names and phone numbers)
                 try {
                     val info = pairingApi.getParentInfo(parentDeviceId)
-                    val serverName = info["displayName"]?.jsonPrimitive?.contentOrNull
-                    val serverPhone = info["phoneNumber"]?.jsonPrimitive?.contentOrNull
-                    if (!serverName.isNullOrBlank()) securePreferences.putString("parent_display_name", serverName)
-                    if (!serverPhone.isNullOrBlank()) securePreferences.putString("parent_phone_number", serverPhone)
+                    val momName = info["momDisplayName"]?.jsonPrimitive?.contentOrNull
+                    val momPhone = info["momPhoneNumber"]?.jsonPrimitive?.contentOrNull
+                    val dadName = info["dadDisplayName"]?.jsonPrimitive?.contentOrNull
+                    val dadPhone = info["dadPhoneNumber"]?.jsonPrimitive?.contentOrNull
+                    if (!momName.isNullOrBlank()) securePreferences.putString("parent_display_name", momName)
+                    if (!momPhone.isNullOrBlank()) securePreferences.putString("parent_phone_number", momPhone)
+                    if (!dadName.isNullOrBlank()) securePreferences.putString("parent_display_name_dad", dadName)
+                    if (!dadPhone.isNullOrBlank()) securePreferences.putString("parent_phone_number_dad", dadPhone)
                 } catch (_: Exception) { /* server may not have parent info set yet */ }
 
-                val parentName = securePreferences.getString("parent_display_name")
-                    ?: getApplication<Application>().getString(R.string.contact_parent_label)
-                val parentPhone = securePreferences.getString("parent_phone_number")
+                val momNameLocal = securePreferences.getString("parent_display_name")
+                    ?: getApplication<Application>().getString(R.string.contact_mom_label)
+                val momPhoneLocal = securePreferences.getString("parent_phone_number")
+                val dadNameLocal = securePreferences.getString("parent_display_name_dad")
+                    ?: getApplication<Application>().getString(R.string.contact_dad_label)
+                val dadPhoneLocal = securePreferences.getString("parent_phone_number_dad")
 
-                val defaultContacts = listOf(
+                val contacts = listOf(
                     Contact(
                         id = parentDeviceId,
-                        name = parentName,
-                        role = ContactRole.GUARDIAN,
+                        name = momNameLocal,
+                        role = ContactRole.MOTHER,
                         isPrimary = true,
-                        phoneNumber = parentPhone
+                        phoneNumber = momPhoneLocal
+                    ),
+                    Contact(
+                        id = parentDeviceId,
+                        name = dadNameLocal,
+                        role = ContactRole.FATHER,
+                        phoneNumber = dadPhoneLocal
                     )
                 )
-                _uiState.update { it.copy(contacts = defaultContacts) }
+                _uiState.update { it.copy(contacts = contacts) }
             } else {
                 _uiState.update { it.copy(contacts = emptyList()) }
             }

@@ -160,6 +160,15 @@
     <string name="settings_language_system">Системна настройка</string>
     <string name="settings_language_english">Английски</string>
     <string name="settings_language_bulgarian">Български</string>
+    <string name="settings_section_profile">Родителски профил</string>
+    <string name="settings_profile_pair_first">Първо сдвоете устройството с детето.</string>
+    <string name="settings_profile_mom_name">Име на майка</string>
+    <string name="settings_profile_mom_phone">Телефон на майка</string>
+    <string name="settings_profile_dad_name">Име на баща</string>
+    <string name="settings_profile_dad_phone">Телефон на баща</string>
+    <string name="settings_profile_save">Запази профил</string>
+    <string name="settings_profile_saved">Профилът е запазен</string>
+    <string name="settings_profile_error">Грешка при запазване на профила</string>
 
     <!-- Generic -->
     <string name="unknown_error">Възникна неизвестна грешка</string>

@@ -2,6 +2,7 @@ package com.childhelper.server.store
 
 import com.childhelper.core.common.model.PairingSession
 import com.childhelper.core.common.model.PairingStatus
+import com.childhelper.core.common.model.ParentInfo
 import java.util.UUID
 import kotlin.random.Random
 
@@ -190,30 +191,43 @@ class PairingStore {
         )
     }
 
-    fun updateParentInfo(parentDeviceId: String, phoneNumber: String?, displayName: String?) {
+    fun updateParentInfo(
+        parentDeviceId: String,
+        momPhoneNumber: String?,
+        momDisplayName: String?,
+        dadPhoneNumber: String?,
+        dadDisplayName: String?
+    ) {
         synchronized(lock) {
             val conn = Database.getConnection()
-            val sql = "UPDATE pairing_sessions SET parent_phone_number = ?, parent_display_name = ? WHERE parent_device_id = ? AND status = ?"
+            val sql = "UPDATE pairing_sessions SET parent_phone_number = ?, parent_display_name = ?, parent_phone_number_dad = ?, parent_display_name_dad = ? WHERE parent_device_id = ? AND status = ?"
             conn.prepareStatement(sql).use { stmt ->
-                stmt.setString(1, phoneNumber)
-                stmt.setString(2, displayName)
-                stmt.setString(3, parentDeviceId)
-                stmt.setString(4, PairingStatus.COMPLETED.name)
+                stmt.setString(1, momPhoneNumber)
+                stmt.setString(2, momDisplayName)
+                stmt.setString(3, dadPhoneNumber)
+                stmt.setString(4, dadDisplayName)
+                stmt.setString(5, parentDeviceId)
+                stmt.setString(6, PairingStatus.COMPLETED.name)
                 stmt.executeUpdate()
             }
         }
     }
 
-    fun getParentInfo(parentDeviceId: String): Pair<String?, String?> {
+    fun getParentInfo(parentDeviceId: String): ParentInfo {
         synchronized(lock) {
             val conn = Database.getConnection()
-            val sql = "SELECT parent_phone_number, parent_display_name FROM pairing_sessions WHERE parent_device_id = ? AND status = ? ORDER BY created_at DESC LIMIT 1"
+            val sql = "SELECT parent_phone_number, parent_display_name, parent_phone_number_dad, parent_display_name_dad FROM pairing_sessions WHERE parent_device_id = ? AND status = ? ORDER BY created_at DESC LIMIT 1"
             conn.prepareStatement(sql).use { stmt ->
                 stmt.setString(1, parentDeviceId)
                 stmt.setString(2, PairingStatus.COMPLETED.name)
                 stmt.executeQuery().use { rs ->
-                    if (!rs.next()) return Pair(null, null)
-                    return Pair(rs.getString("parent_phone_number"), rs.getString("parent_display_name"))
+                    if (!rs.next()) return ParentInfo()
+                    return ParentInfo(
+                        momPhoneNumber = rs.getString("parent_phone_number"),
+                        momDisplayName = rs.getString("parent_display_name"),
+                        dadPhoneNumber = try { rs.getString("parent_phone_number_dad") } catch (_: Exception) { null },
+                        dadDisplayName = try { rs.getString("parent_display_name_dad") } catch (_: Exception) { null }
+                    )
                 }
             }
         }

@@ -12,7 +12,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class CompletePairingRequest(val sessionId: String, val parentDeviceId: String, val parentPublicKey: String, val pairingCode: String)
 @Serializable data class CompleteByCodeRequest(val parentDeviceId: String, val parentPublicKey: String, val pairingCode: String)
 @Serializable data class RevokePairingRequest(val sessionId: String, val deviceId: String)
-@Serializable data class UpdateParentInfoRequest(val parentDeviceId: String, val phoneNumber: String? = null, val displayName: String? = null)
+@Serializable data class UpdateParentInfoRequest(val parentDeviceId: String, val momPhoneNumber: String? = null, val momDisplayName: String? = null, val dadPhoneNumber: String? = null, val dadDisplayName: String? = null)
 
 fun Application.pairingRoutes(store: PairingStore) {
     routing {
@@ -47,13 +47,18 @@ fun Application.pairingRoutes(store: PairingStore) {
             }
             post("/parent-info") {
                 val req = call.receive<UpdateParentInfoRequest>()
-                store.updateParentInfo(req.parentDeviceId, req.phoneNumber, req.displayName)
+                store.updateParentInfo(req.parentDeviceId, req.momPhoneNumber, req.momDisplayName, req.dadPhoneNumber, req.dadDisplayName)
                 call.respond(HttpStatusCode.OK, mapOf("status" to "ok"))
             }
             get("/parent-info/{parentDeviceId}") {
                 val parentDeviceId = call.parameters["parentDeviceId"] ?: return@get call.respond(HttpStatusCode.BadRequest, mapOf("error" to "Missing parentDeviceId"))
-                val (phone, name) = store.getParentInfo(parentDeviceId)
-                call.respond(HttpStatusCode.OK, mapOf("phoneNumber" to phone, "displayName" to name))
+                val info = store.getParentInfo(parentDeviceId)
+                call.respond(HttpStatusCode.OK, mapOf(
+                    "momPhoneNumber" to info.momPhoneNumber,
+                    "momDisplayName" to info.momDisplayName,
+                    "dadPhoneNumber" to info.dadPhoneNumber,
+                    "dadDisplayName" to info.dadDisplayName
+                ))
             }
         }
     }

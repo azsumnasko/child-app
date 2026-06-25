@@ -5,12 +5,12 @@ services:
     build: .
     container_name: childhelper-server
     ports:
-      - "8080:8080"
+      - "80:8080"
     environment:
       - PORT=8080
       - FCM_ACCESS_TOKEN=${FCM_ACCESS_TOKEN:-}
       - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}
-      - TURN_SERVER_URL=${TURN_SERVER_URL:-turn:turn:3478}
+      - TURN_SERVER_URL=${TURN_SERVER_URL:-turn:185.217.125.4:3478}
       - TURN_USERNAME=${TURN_USERNAME:-childhelper}
       - TURN_SECRET=${TURN_SECRET:-changeme}
       - TURN_CREDENTIAL_TTL_SECONDS=${TURN_CREDENTIAL_TTL_SECONDS:-86400}
